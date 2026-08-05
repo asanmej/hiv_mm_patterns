@@ -30,9 +30,9 @@ We import:
   
 ```{r}
 # Load datasets
-scores_df <- read_csv("patient_pattern_scores.csv")
-cohort_match <- read_csv("cohort_match_id.csv")
-bdu_data <- read_csv("bdu_full.csv")
+scores_df <- read_csv(file.path(PATH_INTERMEDIATE, "patient_pattern_scores.csv"))
+cohort_match <- read_csv(file.path(PATH_DATA,"cohort_match_id.csv"))
+bdu_data <- read_csv(file.path(PATH_DATA,"bdu_full.csv"))
 
 # Merge into a single master validation dataset
 master_df <- cohort_match %>% 
@@ -156,5 +156,6 @@ ggplot(or_results, aes(x = OR, y = Pattern)) +
 We save the resulting statistical validation table.  
   
 ```{r}
-write_csv(or_results, "epidemiological_validation_or_results.csv")
+write_csv(or_results, 
+          file.path(PATH_RESULTS,"epidemiological_validation_or_results.csv"))
 ```  
