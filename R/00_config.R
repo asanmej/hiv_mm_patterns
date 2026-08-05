@@ -3,6 +3,9 @@
 # 1. List of required packages 
 pkg <- c(
   
+  ## Directory management
+  "here", 
+  
   # 1. Hierarchical clustering analysis
   ## For data manipulation and visualization
   "tidyverse",
@@ -11,7 +14,9 @@ pkg <- c(
   ## To customize and view dendrograms
   "dendextend",
   ## To evaluate the average silhouette width 
-  "cluster"
+  "cluster",  
+  ## Conditional logistic regression (for 03_validation)
+  "survival" 
   
   # 2. Data visualization
  
@@ -25,4 +30,36 @@ lapply(pkg, function (x){
   })
 
 # 3. Clean the environment by deleting the temporary variable
-rm(pkg)
+rm(pkg)  
+  
+# 4. Stablish relative paths required for the execution  
+
+## Directories
+PATH_PROYECT <- here()
+
+PATH_DATA <- file.path(PATH_PROYECT, "Datos")
+PATH_R <- file.path(PATH_PROYECT, "R")
+PATH_RESULTS <- file.path(PATH_PROYECT, "Results")
+
+## Transformed data
+PATH_TRANSFORMED <- file.path(PATH_PROYECT, "Datos_transformados")
+
+## Output folder are created automatically
+dirs <- c(
+  PATH_RESULTS,
+  PATH_TRANSFORMED
+)
+
+invisible(
+  lapply(
+    dirs,
+    dir.create,
+    recursive = TRUE,
+    showWarnings = FALSE
+  )
+)
+
+## Original data (.csv)
+PATH_BDU_FULL <- file.path(PATH_DATA, "bdu_full.csv")
+PATH_COHORT_MATCH_ID <- file.path(PATH_DATA, "cohort_match_id.csv")
+PATH_DIAG_BOOL_PREVALENT_FINAL <- file.path(PATH_DATA, "diagnosis_bool_prevalent_final.csv")
