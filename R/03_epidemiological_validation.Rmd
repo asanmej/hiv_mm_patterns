@@ -25,7 +25,7 @@ knitr::opts_chunk$set(
    
 We import:  
 - Patient-level pattern scores (`patient_pattern_scores.csv`). 
-- Matched cohort structure (`cohort_match_id.csv`).
+- Matched cohort structure 1:2 (`cohort_match_id.csv`).
 - Demographic baseline variables (`bdu_full.csv`).  
   
 ```{r}
@@ -44,9 +44,20 @@ head(master_df)
 
 # 2. Descriptive Prevalence: HIV vs. Matched Controls  
   
-We summarize the proportion of individuals presenting at least one condition ($\ge 1$) per comorbidity pattern, stratified by HIV status.  
+We verify the matched cohort distribution ($1:2$ risk-set sampling) and calculate the proportion of individuals presenting at least one condition ($\ge 1$) per comorbidity pattern, stratified by HIV status.  
   
 ```{r}
+# Cohort size validation
+cohort_counts <- master_df %>% 
+  group_by(vih_bool) %>% 
+  summarise(
+    n_patients = n_distinct(patient_id),
+    n_records = n()
+  ) %>% 
+  mutate(HIV_Status = if_else(vih_bool == 1, "PLWH (Cases)", "PNLWH (Controls)"))
+
+print(cohort_counts)
+
 # Calculate pattern prevalence (binary flags) by HIV status
 prevalence_summary <- master_df %>% 
   group_by(vih_bool) %>% 
@@ -62,36 +73,35 @@ prevalence_summary <- master_df %>%
   mutate(
     Pattern = str_replace(Pattern, "prev_pattern_", "Pattern "),
     Pattern = str_replace(Pattern, "_bool", ""),
-    HIV_Status = if_else(vih_bool == 1, "HIV", "Control")
+    HIV_Status = if_else(vih_bool == 1, "PLWH", "PNLWH")
   )
 
-# Display summary table
+# Display prevalence summary table
 prevalence_summary %>% 
   select(HIV_Status, Pattern, Prevalence_pct) %>% 
   pivot_wider(names_from = HIV_Status, values_from = Prevalence_pct)
 ```
   
   
-# 3. Univariate Statistical Testing  
+# 3. Univariate Statistical Testing (Paired Comparisons)  
   
-We test for significant differences between HIV patients and controls:  
-- McNemar's test for binary pattern flags (paired proportion comparison). 
-- Wilcoxon signed-rank test for pattern disease counts (paired continuous burden).  
+We test for significant differences between PLWH cases and matched controls using McNemar's test for binary pattern flags.  
   
 ```{r}
 # Identify pattern boolean columns
 pattern_bool_cols <- names(master_df)[str_detect(names(master_df), "^pattern_\\d+_bool$")]
 
-# Paired statistical comparisons (HIV vs matched control per pair)
-# Reshape to paired format using match_id
+# Reshape to wide format by match_id for paired testing
 paired_data <- master_df %>% 
   select(match_id, vih_bool, all_of(pattern_bool_cols)) %>% 
   pivot_wider(
     id_cols = match_id,
     names_from = vih_bool,
     values_from = all_of(pattern_bool_cols),
-    names_prefix = "hiv_"
-  )
+    names_prefix = "hiv_",
+    values_fn = list # Handles 1:2 ratio by taking first matching control for McNemar pair
+  ) %>% 
+  mutate(across(everything(), ~ map_dbl(.x, ~ if(length(.x) > 0) .x[1] else NA_real_)))
 
 # Function to run McNemar test per pattern
 mcnemar_results <- map_dfr(pattern_bool_cols, function(col) {
@@ -100,11 +110,10 @@ mcnemar_results <- map_dfr(pattern_bool_cols, function(col) {
   
   tbl <- table(paired_data[[col_hiv]], paired_data[[col_ctrl]])
   
-  # Run McNemar test if table dimensions allow
   mcn <- tryCatch(mcnemar.test(tbl), error = function(e) NULL)
   
   data.frame(
-    Pattern = col,
+    Pattern = str_replace(col, "_bool", ""),
     p_value = if (!is.null(mcn)) mcn$p.value else NA_real_
   )
 })
@@ -114,17 +123,17 @@ mcnemar_results %>%
 ```
   
 
-# 4. Visualization: Odds Ratios per Pattern  
+# 4. Multivariate Regression: Odds Ratios per Pattern  
   
-We fit a Conditional Logistic Regression (matching on match_id) to estimate Odds Ratios ($OR$) and $95\%$ Confidence Intervals for each comorbidity pattern.  
+We fit Conditional Logistic Regression models (clogit) stratified by matching set (match_id) with robust variance estimation (cluster(patient_id)) to account for $1:2$ control sampling with replacement.  
   
 ```{r}
-library(survival) # Required for clogit (conditional logistic regression)
-
 # Long-format estimation of conditional logistic regressions per pattern
 or_results <- map_dfr(pattern_bool_cols, function(col_name) {
   formula_str <- paste0(col_name, " ~ vih_bool + strata(match_id)")
-  fit <- clogit(as.formula(formula_str), data = master_df)
+  
+  # Fit conditional logistic regression with robust variance adjustment
+  fit <- clogit(as.formula(formula_str), data = master_df, cluster = patient_id)
   
   res <- summary(fit)
   
@@ -137,6 +146,9 @@ or_results <- map_dfr(pattern_bool_cols, function(col_name) {
   )
 })
 
+# Display numeric results
+print(or_results)
+
 # Forest plot of Odds Ratios
 ggplot(or_results, aes(x = OR, y = Pattern)) +
   geom_point(size = 3, color = "#2c3e50") +
@@ -144,8 +156,8 @@ ggplot(or_results, aes(x = OR, y = Pattern)) +
   geom_vline(xintercept = 1, linetype = "dashed", color = "red") +
   scale_x_log10() +
   labs(
-    title = "Comorbidity Pattern Risk in HIV vs. Matched Controls",
-    subtitle = "Conditional Logistic Regression (Adjusted by matching pair)",
+    title = "Comorbidity Pattern Risk in PLWH vs. Matched Controls",
+    subtitle = "Conditional Logistic Regression stratified by match_id (Robust Cluster SE)",
     x = "Odds Ratio (log scale)",
     y = "Pattern Cluster"
   ) +
