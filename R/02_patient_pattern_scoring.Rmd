@@ -29,13 +29,12 @@ We import:
 
 ```{r load-data}
 # 1. Load patient diagnostic matrix
-diag_data <- read_csv("diagnosis_bool_prevalent_final.csv")
+diag_data <- read_csv(PATH_DIAG_BOOL_PREVALENT_FINAL)
 
 # 2. Load disease pattern mapping (Output from 01_hierarchical_clustering)
-disease_patterns <- read_csv("jaccard_disease_patterns.csv")
+disease_patterns <- read_csv( file.path(PATH_INTERMEDIATE,"jaccard_disease_patterns.csv"))
 
 head(disease_patterns)
-
 ```
 
 # 2. Calculate Pattern Scores per Patient
@@ -84,7 +83,7 @@ head(patient_pattern_scores)
 
 ```
 
-# 4. Summary Statistics of Pattern Scores
+# 3. Summary Statistics of Pattern Scores
 
 We inspect the prevalence and distribution of each comorbidity pattern across the entire cohort.
 
@@ -102,11 +101,11 @@ patient_pattern_scores %>%
 
 ```
 
-# 5. Export Processed Scores
+# 4. Export Processed Scores
 
 We save the resulting dataset containing patient IDs and their respective pattern scores for subsequent epidemiological validation against HIV status.
 
 ```{r export}
-write_csv(patient_pattern_scores, "patient_pattern_scores.csv")
+write_csv(patient_pattern_scores, file.path(PATH_INTERMEDIATE, "patient_pattern_scores.csv"))
 ```
 
