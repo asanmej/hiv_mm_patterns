@@ -41,13 +41,13 @@ PATH_DATA <- file.path(PATH_PROYECT, "Datos")
 PATH_R <- file.path(PATH_PROYECT, "R")
 PATH_RESULTS <- file.path(PATH_PROYECT, "Results")
 
-## Transformed data
-PATH_TRANSFORMED <- file.path(PATH_PROYECT, "Datos_transformados")
+## Intermediatr data
+PATH_INTERMEDIATE <- file.path(PATH_PROYECT, "Datos_transformados")
 
 ## Output folder are created automatically
 dirs <- c(
   PATH_RESULTS,
-  PATH_TRANSFORMED
+  PATH_INTERMEDIATE
 )
 
 invisible(
