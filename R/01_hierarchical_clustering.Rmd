@@ -1,0 +1,132 @@
+---
+title: "Comorbidity Patterns using Hierarchical Clustering"
+subtitle: "Unsupervised analysis (Jaccard distance)"
+author: "Inés García de la Peña Marco"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: readable
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 12,
+  fig.height = 8
+)
+```  
+  
+# 1. Introduction and Configuration  
+  
+The objective of this script is to identify complex clusters of diseases (comorbidity patterns) in a completely unsupervised manner.   
+  
+Since the diagnostic matrix is composed of binary variables (0/1), the Jaccard distance is used to avoid the bias of shared absences (0-0) and to evaluate similarity based solely on the co-occurrence of pathologies.  
+  
+# 2. Data Loading and Preparation  
+  
+We load the prevalence dataset and prepare the excluded matrix of primary study identifiers and variables (HIV_infection, HIV-related_disease).  
+  
+```{r}
+# Upload prevalent diagnostic data
+diag_data <- read_csv("diagnosis_bool_prevalent_final.csv")
+
+# Filter disease matrix
+disease_df <- diag_data %>% 
+  select(-patient_id, -vih_dt, -HIV_infection, -`HIV-related_disease`)
+
+# Convert to numeric matrix R
+matrix_disease <- as.matrix(disease_df)
+
+dim(matrix_disease)
+```  
+  
+# 3. Transposed Matrix and Jaccard Distance  
+  
+To group variables (diseases) instead of observations (patients), it is necessary to transpose the matrix before calculating the distances.  
+  
+$$\text{Jaccard Distance} = 1 - \frac{A \cap B}{A \cup B}$$  
+  
+```{r}
+# Transpose the matrix: Rows = Diseases | Columns = Patients
+diseases_t <- t(matrix_disease)
+
+# Calculate Jaccard distance matrix between pathologies
+jaccard_dist <- proxy::dist(diseases_t, method = "Jaccard")
+```  
+  
+# 4. Hierarchical clustering (Ward.D2)  
+  
+We performed hierarchical clustering using the Ward.D2 linkage metric, which minimizes variance within the resulting clusters.  
+  
+```{r}
+# Adjust the hierarchical clustering model
+hc_diseases <- hclust(jaccard_dist, method = "ward.D2")
+```  
+  
+# 5. Visualization of the Dendrogram  
+  
+We visualize the hierarchical structure of pathologies to analyze the natural patterns of comorbidity.  
+  
+```{r}
+# Graph the dendrogram of pathologies
+dend <- as.dendrogram(hc_diseases)
+
+# Customize size and colors
+dend %>% 
+  set("labels_cex", 0.5) %>% 
+  set("branches_k_color", k = 5) %>% 
+  plot(
+    main = "Comorbidity Pattern Dendrogram (Jaccard + Ward.D2)",
+    ylab = "Height (Jaccard Distance)"
+  )
+```
+  
+# 6. Selecting the Optimal Number of Patterns (k)  
+  
+Instead of assuming a number of patterns a priori or applying generic empirical rules (such as $k = \sqrt{N/2}$), we evaluate the **average silhouette width** on the Jaccard dissimilarity matrix for $k \in [2, 15]$.
+
+```{r optimal-k}
+# Calculate the silhouette profile to assess group cohesion
+sil_values <- sapply(2:15, function(k_val) {
+  summary(silhouette(cutree(hc_diseases, k = k_val), jaccard_dist))$avg.width
+})
+
+# Graphically represent the result
+plot(2:15, sil_values, type = "b", pch = 19,
+     xlab = "Number of Clusters (k)", 
+     ylab = "Average Silhouette",
+     main = "Evaluation of k using Average Silhouette Width")
+
+# Automatically select optimal k
+k_optimo <- which.max(sil_values) + 1   
+```  
+  
+# 7. Pattern Extraction and Export  
+  
+We use the optival k value to extract the lists of pathologies belonging to each pattern.  
+  
+```{r}
+k_clusters <- k_optimo
+diseases_clusters <- cutree(hc_diseases, k = k_clusters)
+
+# Disease to cluster mapping
+df_patrones <- data.frame(
+  enfermedad = names(diseases_clusters),
+  cluster = factor(diseases_clusters)
+) %>% 
+  arrange(cluster)
+
+# Save results in CSV
+write_csv(df_patrones, "jaccard_disease_patterns.csv")
+
+# Show summary of pathologies by cluster
+df_patrones %>% 
+  group_by(cluster) %>% 
+  summarise(n_enfermedades = n(), ejemplos = paste(head(enfermedad, 3), collapse = ", "))
+```
+
