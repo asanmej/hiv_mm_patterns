@@ -9,7 +9,9 @@ pkg <- c(
   ## For efficient Jaccard distance calculation
   "proxy", 
   ## To customize and view dendrograms
-  "dendextend"
+  "dendextend",
+  ## To evaluate the average silhouette width 
+  "cluster"
   
   # 2. Data visualization
  
