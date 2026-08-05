@@ -5,6 +5,8 @@ pkg <- c(
   
   ## Directory management
   "here", 
+  ## Para guardar el HTML en un directorio distinto
+  "rmarkdown",
   
   # 1. Hierarchical clustering analysis
   ## For data manipulation and visualization
