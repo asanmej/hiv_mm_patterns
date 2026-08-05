@@ -1,0 +1,112 @@
+---
+title: "Patient Pattern Scoring"
+subtitle: "Mapping disease clusters onto individual patient profiles"
+author: "Inés García de la Peña Marco"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: readable
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE
+)
+
+```
+
+# 1. Load Input Datasets
+
+We import:
+
+1. The binary diagnosis matrix (`diagnosis_bool_prevalent_final.csv`).
+2. The mapped disease patterns derived from the unsupervised clustering step (`jaccard_disease_patterns.csv`).
+
+```{r load-data}
+# 1. Load patient diagnostic matrix
+diag_data <- read_csv("diagnosis_bool_prevalent_final.csv")
+
+# 2. Load disease pattern mapping (Output from 01_hierarchical_clustering)
+disease_patterns <- read_csv("jaccard_disease_patterns.csv")
+
+head(disease_patterns)
+
+```
+
+# 2. Calculate Pattern Scores per Patient
+
+We pivot the binary diagnosis matrix to a long format, join it with the assigned clusters, and summarize the total number of conditions each patient presents per pattern.
+
+```{r compute-scores}
+# Reshape diagnosis matrix and match with pattern mapping
+patient_patterns_long <- diag_data %>%
+  select(-vih_dt, -HIV_infection, -`HIV-related_disease`) %>% 
+  pivot_longer(
+    cols = -patient_id, 
+    names_to = "enfermedad", 
+    values_to = "has_disease"
+  ) %>%
+  filter(has_disease == 1) %>%
+  inner_join(disease_patterns, by = "enfermedad")
+
+# Compute count score and binary flag (present/absent) per patient and cluster
+patient_scores_wide <- patient_patterns_long %>%
+  group_by(patient_id, cluster) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  pivot_wider(
+    names_from = cluster, 
+    values_from = count, 
+    names_prefix = "pattern_",
+    values_fill = 0
+  )
+
+# Ensure all original patients are retained (even if they have 0 conditions in all clusters)
+all_patients <- diag_data %>% select(patient_id)
+
+patient_pattern_scores <- all_patients %>%
+  left_join(patient_scores_wide, by = "patient_id") %>%
+  mutate(across(starts_with("pattern_"), ~ replace_na(.x, 0)))
+
+# Add binary flags (1 if patient has >= 1 disease in that pattern, 0 otherwise)
+patient_pattern_scores <- patient_pattern_scores %>%
+  mutate(across(
+    starts_with("pattern_"), 
+    ~ ifelse(.x >= 1, 1, 0), 
+    .names = "{.col}_bool"
+  ))
+
+head(patient_pattern_scores)
+
+```
+
+# 4. Summary Statistics of Pattern Scores
+
+We inspect the prevalence and distribution of each comorbidity pattern across the entire cohort.
+
+```{r summary-stats}
+# Summary of disease counts per pattern
+patient_pattern_scores %>% 
+  select(starts_with("pattern_") & !ends_with("_bool")) %>% 
+  summary()
+
+# Prevalence of having at least 1 condition per pattern
+patient_pattern_scores %>% 
+  select(ends_with("_bool")) %>% 
+  summarise(across(everything(), ~ mean(.x) * 100)) %>% 
+  pivot_longer(cols = everything(), names_to = "Pattern", values_to = "Prevalence_pct")
+
+```
+
+# 5. Export Processed Scores
+
+We save the resulting dataset containing patient IDs and their respective pattern scores for subsequent epidemiological validation against HIV status.
+
+```{r export}
+write_csv(patient_pattern_scores, "patient_pattern_scores.csv")
+```
+
