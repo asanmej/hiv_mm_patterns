@@ -33,7 +33,7 @@ We load the prevalence dataset and prepare the excluded matrix of primary study 
   
 ```{r}
 # Upload prevalent diagnostic data
-diag_data <- read_csv("diagnosis_bool_prevalent_final.csv")
+diag_data <- read_csv(PATH_DIAG_BOOL_PREVALENT_FINAL)
 
 # Filter disease matrix
 disease_df <- diag_data %>% 
@@ -68,25 +68,7 @@ We performed hierarchical clustering using the Ward.D2 linkage metric, which min
 hc_diseases <- hclust(jaccard_dist, method = "ward.D2")
 ```  
   
-# 5. Visualization of the Dendrogram  
-  
-We visualize the hierarchical structure of pathologies to analyze the natural patterns of comorbidity.  
-  
-```{r}
-# Graph the dendrogram of pathologies
-dend <- as.dendrogram(hc_diseases)
-
-# Customize size and colors
-dend %>% 
-  set("labels_cex", 0.5) %>% 
-  set("branches_k_color", k = 5) %>% 
-  plot(
-    main = "Comorbidity Pattern Dendrogram (Jaccard + Ward.D2)",
-    ylab = "Height (Jaccard Distance)"
-  )
-```
-  
-# 6. Selecting the Optimal Number of Patterns (k)  
+# 5. Selecting the Optimal Number of Patterns (k)  
   
 Instead of assuming a number of patterns a priori or applying generic empirical rules (such as $k = \sqrt{N/2}$), we evaluate the **average silhouette width** on the Jaccard dissimilarity matrix for $k \in [2, 15]$.
 
@@ -103,7 +85,25 @@ plot(2:15, sil_values, type = "b", pch = 19,
      main = "Evaluation of k using Average Silhouette Width")
 
 # Automatically select optimal k
-k_optimo <- which.max(sil_values) + 1   
+k_optimal <- which.max(sil_values) + 1   
+```    
+  
+# 6. Visualization of the Dendrogram  
+  
+We visualize the hierarchical structure of pathologies to analyze the natural patterns of comorbidity.  
+  
+```{r}
+# Graph the dendrogram of pathologies
+dend <- as.dendrogram(hc_diseases)
+
+# Customize size and colors
+dend %>% 
+  set("labels_cex", 0.5) %>% 
+  set("branches_k_color", k = k_optimal) %>% 
+  plot(
+    main = "Comorbidity Pattern Dendrogram (Jaccard + Ward.D2)",
+    ylab = "Height (Jaccard Distance)"
+  )
 ```  
   
 # 7. Pattern Extraction and Export  
@@ -111,7 +111,7 @@ k_optimo <- which.max(sil_values) + 1
 We use the optival k value to extract the lists of pathologies belonging to each pattern.  
   
 ```{r}
-k_clusters <- k_optimo
+k_clusters <- k_optimal
 diseases_clusters <- cutree(hc_diseases, k = k_clusters)
 
 # Disease to cluster mapping
@@ -122,7 +122,10 @@ df_patrones <- data.frame(
   arrange(cluster)
 
 # Save results in CSV
-write_csv(df_patrones, "jaccard_disease_patterns.csv")
+write_csv(
+  df_patrones,
+  file.path(PATH_INTERMEDIATE, "jaccard_disease_patterns.csv")
+)
 
 # Show summary of pathologies by cluster
 df_patrones %>% 
