@@ -18,7 +18,6 @@ pkg <- c(
   ## To save the HTML in a different directory
   "rmarkdown",
   
-  # 1. Hierarchical clustering analysis
   ## For data manipulation and visualization
   "tidyverse",
   ## To calculate the Hopkins Statistic
@@ -29,15 +28,8 @@ pkg <- c(
   "dendextend",
   ## To evaluate the average silhouette width 
   "cluster",  
-  ## Conditional logistic regression (for 03_validation)
+  ## Conditional logistic regression
   "survival", 
-  
-  # 2. Data visualization
-  ## To convert static ggplot2 figures into interactive HTML plots
-  "plotly",
-  ## To export and save standalone interactive widgets without auxiliary folders
-  "htmlwidgets"
-  
 )
 
 # 2. Automatically load and install missing packages
