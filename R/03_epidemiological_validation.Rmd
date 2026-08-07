@@ -21,7 +21,14 @@ knitr::opts_chunk$set(
 )  
 ```  
   
-# 1. Load Input Data  
+# 1. Introduction  
+Once we have mapped the identifyied patterns to individual patient profiles in the previous steps, the next step is to validate these patterns.  
+  
+In this script, it is performed a comparative analysis between the HIV cohort (People Living with HIV, PLWH) and the cohort of non-HIV matched controls (NPLWH).  
+  
+By using paired statistical tests, as McNemar tests, and conditional logistic regression models adjusted for matching strata and standard errors, we evaluate if a specific pattern is over or underrepresented in PLWH compared to the control group (NPLWH).  
+  
+# 2. Load Input Data and Build Complete Matched Cohort 
    
 We import:  
 - Patient-level pattern scores (`patient_pattern_scores.csv`). 
@@ -30,35 +37,47 @@ We import:
   
 ```{r}
 # Load datasets
-scores_df <- read_csv(file.path(PATH_INTERMEDIATE, "patient_pattern_scores.csv"))
-cohort_match <- read_csv(file.path(PATH_DATA,"cohort_match_id.csv"))
-bdu_data <- read_csv(file.path(PATH_DATA,"bdu_full.csv"))
+scores_df    <- read_csv(file.path(PATH_INTERMEDIATE, "patient_pattern_scores.csv"))
+cohort_match <- read_csv(file.path(PATH_DATA, "cohort_match_id.csv"))
+bdu_data     <- read_csv(file.path(PATH_DATA, "bdu_full.csv"))
 
-# Merge into a single master validation dataset
-master_df <- cohort_match %>% 
+# Extract cases and controls separately to unify them in a long format
+cases_df <- cohort_match %>% 
+  select(match_id, patient_id) %>% 
+  distinct()
+
+controls_df <- cohort_match %>% 
+  select(match_id, patient_id = control_id) %>% 
+  distinct()
+
+# Bind cases and controls into a single matching dataframe
+long_cohort <- bind_rows(cases_df, controls_df)
+
+# Create master_df including pattern scores and demographics for all patients
+master_df <- long_cohort %>% 
   inner_join(scores_df, by = "patient_id") %>% 
   left_join(bdu_data %>% select(patient_id, vih_bool, edad, sexo, indice_privación), by = "patient_id")
 
 head(master_df)
 ```
 
-# 2. Descriptive Prevalence: HIV vs. Matched Controls  
+# 3. Descriptive Prevalence: HIV vs Matched Controls  
   
-We verify the matched cohort distribution ($1:2$ risk-set sampling) and calculate the proportion of individuals presenting at least one condition ($\ge 1$) per comorbidity pattern, stratified by HIV status.  
+We verify the matched cohort distribution ($1:2$ sampling structure) and calculate the proportion of individuals presenting at least one condition ($\ge 1$) per comorbidity pattern, stratified by HIV status.  
   
 ```{r}
-# Cohort size validation
+# Validate that Cases (1) and Controls (0) are properly represented in the dataset
 cohort_counts <- master_df %>% 
   group_by(vih_bool) %>% 
   summarise(
     n_patients = n_distinct(patient_id),
     n_records = n()
   ) %>% 
-  mutate(HIV_Status = if_else(vih_bool == 1, "PLWH (Cases)", "PNLWH (Controls)"))
+  mutate(HIV_Status = if_else(as.logical(vih_bool), "PLWH (Cases)", "PNLWH (Controls)"))
 
 print(cohort_counts)
 
-# Calculate pattern prevalence (binary flags) by HIV status
+# Summary of pattern prevalence by group
 prevalence_summary <- master_df %>% 
   group_by(vih_bool) %>% 
   summarise(
@@ -73,17 +92,16 @@ prevalence_summary <- master_df %>%
   mutate(
     Pattern = str_replace(Pattern, "prev_pattern_", "Pattern "),
     Pattern = str_replace(Pattern, "_bool", ""),
-    HIV_Status = if_else(vih_bool == 1, "PLWH", "PNLWH")
+    HIV_Status = if_else(as.logical(vih_bool), "PLWH", "PNLWH")
   )
 
-# Display prevalence summary table
 prevalence_summary %>% 
   select(HIV_Status, Pattern, Prevalence_pct) %>% 
   pivot_wider(names_from = HIV_Status, values_from = Prevalence_pct)
 ```
   
   
-# 3. Univariate Statistical Testing (Paired Comparisons)  
+# 4. Univariate Statistical Testing (Paired Comparisons)  
   
 We test for significant differences between PLWH cases and matched controls using McNemar's test for binary pattern flags.  
   
@@ -91,25 +109,29 @@ We test for significant differences between PLWH cases and matched controls usin
 # Identify pattern boolean columns
 pattern_bool_cols <- names(master_df)[str_detect(names(master_df), "^pattern_\\d+_bool$")]
 
-# Reshape to wide format by match_id for paired testing
+# Transform to wide format by match_id (Cases "1" vs Controls "0")
 paired_data <- master_df %>% 
-  select(match_id, vih_bool, all_of(pattern_bool_cols)) %>% 
+  mutate(vih_str = if_else(as.logical(vih_bool), "1", "0")) %>% 
+  select(match_id, vih_str, all_of(pattern_bool_cols)) %>% 
   pivot_wider(
     id_cols = match_id,
-    names_from = vih_bool,
+    names_from = vih_str,
     values_from = all_of(pattern_bool_cols),
     names_prefix = "hiv_",
-    values_fn = list # Handles 1:2 ratio by taking first matching control for McNemar pair
+    values_fn = list
   ) %>% 
-  mutate(across(everything(), ~ map_dbl(.x, ~ if(length(.x) > 0) .x[1] else NA_real_)))
+  mutate(across(-match_id, ~ map_dbl(.x, ~ if (length(.x) > 0) .x[1] else NA_real_)))
 
-# Function to run McNemar test per pattern
+# Execute McNemar Test
 mcnemar_results <- map_dfr(pattern_bool_cols, function(col) {
-  col_hiv <- paste0(col, "_hiv_1")
+  col_hiv  <- paste0(col, "_hiv_1")
   col_ctrl <- paste0(col, "_hiv_0")
   
-  tbl <- table(paired_data[[col_hiv]], paired_data[[col_ctrl]])
+  if (!all(c(col_hiv, col_ctrl) %in% names(paired_data))) {
+    return(data.frame(Pattern = str_replace(col, "_bool", ""), p_value = NA_real_))
+  }
   
+  tbl <- table(paired_data[[col_hiv]], paired_data[[col_ctrl]])
   mcn <- tryCatch(mcnemar.test(tbl), error = function(e) NULL)
   
   data.frame(
@@ -118,31 +140,39 @@ mcnemar_results <- map_dfr(pattern_bool_cols, function(col) {
   )
 })
 
-mcnemar_results %>% 
+mcnemar_results <- mcnemar_results %>% 
   mutate(p_adj = p.adjust(p_value, method = "BH"))
+
+print(mcnemar_results)
 ```
   
 
-# 4. Multivariate Regression: Odds Ratios per Pattern  
+# 5. Multivariate Regression: Odds Ratios per Pattern  
   
-We fit Conditional Logistic Regression models (clogit) stratified by matching set (match_id) with robust variance estimation (cluster(patient_id)) to account for $1:2$ control sampling with replacement.  
+We fit Conditional Logistic Regression models (`clogit`) stratified by matching set (`match_id`) with robust variance estimation (`cluster(patient_id)`) to account for $1:2$ control sampling with replacement.  
   
 ```{r}
 # Long-format estimation of conditional logistic regressions per pattern
 or_results <- map_dfr(pattern_bool_cols, function(col_name) {
-  formula_str <- paste0(col_name, " ~ vih_bool + strata(match_id)")
+  # Response variable is vih_bool and explanatory variable is the pattern flag
+  formula_str <- paste0("vih_bool ~ ", col_name, " + strata(match_id)")
   
-  # Fit conditional logistic regression with robust variance adjustment
-  fit <- clogit(as.formula(formula_str), data = master_df, cluster = patient_id)
+ # Fit conditional logistic regression with method = "efron" to allow robust cluster SEs
+  fit <- clogit(
+    as.formula(formula_str), 
+    data = master_df, 
+    cluster = patient_id,
+    method = "efron"
+  )
   
   res <- summary(fit)
   
   data.frame(
-    Pattern = str_replace(col_name, "_bool", ""),
-    OR = res$coefficients[1, "exp(coef)"],
+    Pattern  = str_replace(col_name, "_bool", ""),
+    OR       = res$coefficients[1, "exp(coef)"],
     CI_lower = res$conf.int[1, "lower .95"],
     CI_upper = res$conf.int[1, "upper .95"],
-    p_value = res$coefficients[1, "Pr(>|z|)"]
+    p_value  = res$coefficients[1, "Pr(>|z|)"]
   )
 })
 
@@ -164,8 +194,8 @@ ggplot(or_results, aes(x = OR, y = Pattern)) +
   theme_minimal()
 ```  
   
-# 5. Export Validation Results  
-We save the resulting statistical validation table.  
+# 6. Export Validation Results  
+We save the resulting statistical validation table:  
   
 ```{r}
 write_csv(or_results, 
