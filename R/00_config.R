@@ -1,16 +1,28 @@
-# 00_config.R: 
+# -----------------------------------------------------------------------------
+# 00_config.R: Global Project Configuration
+#
+# Description:
+# This script initializes the working environment for the project.
+
+# It handles automated dependency management (installation and loading of 
+# required libraries), environment cleanup, standardized definition of relative 
+# paths using the 'here' package, and automatic creation of the output directory 
+# structure necessary for the entire pipeline.
+# ----------------------------------------------------------------------------- 
 
 # 1. List of required packages 
 pkg <- c(
   
   ## Directory management
   "here", 
-  ## Para guardar el HTML en un directorio distinto
+  ## To save the HTML in a different directory
   "rmarkdown",
   
   # 1. Hierarchical clustering analysis
   ## For data manipulation and visualization
   "tidyverse",
+  ## To calculate the Hopkins Statistic
+  "factoextra",
   ## For efficient Jaccard distance calculation
   "proxy", 
   ## To customize and view dendrograms
@@ -18,33 +30,36 @@ pkg <- c(
   ## To evaluate the average silhouette width 
   "cluster",  
   ## Conditional logistic regression (for 03_validation)
-  "survival" 
+  "survival", 
   
   # 2. Data visualization
- 
+  ## To convert static ggplot2 figures into interactive HTML plots
+  "plotly",
+  ## To export and save standalone interactive widgets without auxiliary folders
+  "htmlwidgets"
+  
 )
 
 # 2. Automatically load and install missing packages
 lapply(pkg, function (x){
   if(!require(x, character.only = T)){
     install.packages(x , character.only = T)
-    }
-  })
+  }
+})
 
 # 3. Clean the environment by deleting the temporary variable
 rm(pkg)  
-  
+
 # 4. Stablish relative paths required for the execution  
 
 ## Directories
 PATH_PROYECT <- here()
 
-PATH_DATA <- file.path(PATH_PROYECT, "Datos")
+PATH_DATA <- file.path(PATH_PROYECT, "Data")
 PATH_R <- file.path(PATH_PROYECT, "R")
 PATH_RESULTS <- file.path(PATH_PROYECT, "Results")
 
-## Intermediatr data
-PATH_INTERMEDIATE <- file.path(PATH_PROYECT, "Datos_transformados")
+PATH_INTERMEDIATE <- file.path(PATH_PROYECT, "Intermediate_data")
 
 ## Output folder are created automatically
 dirs <- c(
