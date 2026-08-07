@@ -29,7 +29,7 @@ pkg <- c(
   ## To evaluate the average silhouette width 
   "cluster",  
   ## Conditional logistic regression
-  "survival", 
+  "survival" 
 )
 
 # 2. Automatically load and install missing packages
