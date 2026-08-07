@@ -1,0 +1,286 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.0.9 Chrome/128.0.6613.186 Electron/32.2.5 Safari/537.36" version="26.0.9">
+  <diagram name="Página-1" id="VhJDz416_3a1v3BorxdE">
+    <mxGraphModel dx="1514" dy="1731" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-39" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#E6E6E6,var(--ge-dark-color, #121212));movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" parent="1" vertex="1">
+          <mxGeometry x="70" y="810" width="880" height="410" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-25" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#E6E6E6,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="550" y="180" width="350" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#E6E6E6,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="70" y="60" width="350" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-2" value="&lt;b&gt;00_config.R&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="215" y="60" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-3" target="xG9b4cZpaKj3J7stmtx5-7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-3" target="xG9b4cZpaKj3J7stmtx5-26" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="155" y="20" />
+              <mxPoint x="725" y="20" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-3" value="&lt;b&gt;Paths Definition&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="95" y="100" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-4" target="xG9b4cZpaKj3J7stmtx5-7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-4" target="xG9b4cZpaKj3J7stmtx5-26" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="729.9999999999998" y="180" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="333" y="20" />
+              <mxPoint x="725" y="20" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-4" value="&lt;b&gt;Library Management&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="265" y="100" width="135" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-4" target="xG9b4cZpaKj3J7stmtx5-4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-6" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#E6E6E6,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="70" y="180" width="350" height="580" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-7" value="&lt;b&gt;Script 1: Unsupervised Clustering (01_hierarchical_clustering.Rmd)&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="107.5" y="181" width="275" height="39" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="xG9b4cZpaKj3J7stmtx5-8" target="xG9b4cZpaKj3J7stmtx5-9" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-37" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-8" target="xG9b4cZpaKj3J7stmtx5-27" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="xG9b4cZpaKj3J7stmtx5-9" target="xG9b4cZpaKj3J7stmtx5-11" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-9" value="&lt;b&gt;Matrix Preparation:&amp;nbsp;&lt;/b&gt;&lt;div&gt;Excluding patient_id, vih_dt, HIV_infection, HIV_related_disease&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="113.75" y="290" width="262.5" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="xG9b4cZpaKj3J7stmtx5-11" target="xG9b4cZpaKj3J7stmtx5-13" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-11" value="&lt;b&gt;Matrix Transposition:&amp;nbsp;&lt;/b&gt;&lt;div&gt;(Rows = Diseases | Columns = Patients)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="113.75" y="380" width="262.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-13" target="xG9b4cZpaKj3J7stmtx5-15" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-13" value="&lt;div&gt;&lt;b&gt;Jaccard Distance Calculation:&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: rgb(230, 81, 0); font-family: &amp;quot;Recursive Variable&amp;quot;, arial, sans-serif; font-size: 14px; text-wrap: nowrap; background-color: rgb(255, 230, 204);&quot;&gt;d = 1 - (A ∩ B) / (A ∪ B)&lt;/span&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="113.75" y="450" width="262.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="xG9b4cZpaKj3J7stmtx5-15" target="xG9b4cZpaKj3J7stmtx5-17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-15" value="&lt;div&gt;&lt;b&gt;Hierarchical Clustering:&lt;/b&gt;&lt;/div&gt;&lt;div&gt;(Ward.D2 Linkage)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="253.75" y="510" width="157.5" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-17" target="xG9b4cZpaKj3J7stmtx5-21" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-17" value="&lt;div&gt;&lt;b&gt;Optimal Cutoff Evaluation Average Silhouette Width&lt;/b&gt;&lt;/div&gt;&lt;div&gt;(k = 2 - 15)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="137.5" y="590" width="215" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-38" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-21" target="xG9b4cZpaKj3J7stmtx5-29" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="xG9b4cZpaKj3J7stmtx5-21" target="4vynbTDBEwNCiGUKn_Pr-8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="30" y="705" />
+              <mxPoint x="30" y="1240" />
+              <mxPoint x="473" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-21" value="&lt;b&gt;jaccard_disease_patterns.csv&lt;/b&gt;&lt;div&gt;&lt;b&gt;(Disease-to-Cluster Mapping)&lt;/b&gt;&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=light-dark(#FFCCFF,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="130" y="680" width="230" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-26" value="&lt;b&gt;Script 2: Patient-Level Pattern Scoring (02_patient_pattern_scoring.Rmd)&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="587.5" y="180" width="275" height="39" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-27" target="xG9b4cZpaKj3J7stmtx5-29" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-27" value="&lt;div&gt;&lt;b&gt;Long Format Transformation:&lt;/b&gt;&lt;/div&gt;&lt;div&gt;(Unpivot Diagnosis Flags)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="593.75" y="230" width="262.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-29" target="xG9b4cZpaKj3J7stmtx5-30" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-29" value="&lt;b&gt;Join Patient Diagnoses with Assigned Clusters&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="593.75" y="310" width="262.5" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-30" target="xG9b4cZpaKj3J7stmtx5-31" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-30" value="&lt;div&gt;&lt;b&gt;Compute Burden Scores per Patient:&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Count Score : Total diseases per pattern&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Binary Flag:&amp;nbsp;&lt;span style=&quot;color: rgb(230, 81, 0); font-family: &amp;quot;Recursive Variable&amp;quot;, arial, sans-serif; font-size: 14px; text-wrap: nowrap; background-color: rgb(255, 230, 204);&quot;&gt;pattern_X_bool ≥ 1&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="593.75" y="390" width="262.5" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-50" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-31" target="xG9b4cZpaKj3J7stmtx5-44" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="760" y="530" />
+              <mxPoint x="760" y="932" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-31" value="&lt;b&gt;patient_pattern_scores.csv&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=light-dark(#FFCCFF,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="610" y="510" width="230" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="xG9b4cZpaKj3J7stmtx5-8" target="4vynbTDBEwNCiGUKn_Pr-8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="30" y="250" />
+              <mxPoint x="30" y="1240" />
+              <mxPoint x="473" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-8" value="&lt;b&gt;diagnosis_bool_prevalent_final.csv&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=light-dark(#CCE5FF,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="130" y="230" width="230" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-41" value="&lt;b&gt;Script 3: Validation (03_epidemiological_validation.Rmd)&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="335" y="810" width="275" height="39" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-48" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-42" target="xG9b4cZpaKj3J7stmtx5-44" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-42" value="&lt;b&gt;cohort_match_id.csv&lt;/b&gt;&lt;div&gt;&lt;b&gt;(Matched Sets 1:2)&lt;/b&gt;&lt;span style=&quot;color: rgba(0, 0, 0, 0); font-family: monospace; font-size: 0px; text-align: start; text-wrap: nowrap; background-color: transparent;&quot;&gt;%3CmxGraphModel%3E%3Croot%3E%3CmxCell%20id%3D%220%22%2F%3E%3CmxCell%20id%3D%221%22%20parent%3D%220%22%2F%3E%3CmxCell%20id%3D%222%22%20value%3D%22%26lt%3Bb%26gt%3Bdiagnosis_bool_prevalent_final.csv%26lt%3B%2Fb%26gt%3B%22%20style%3D%22ellipse%3BwhiteSpace%3Dwrap%3Bhtml%3D1%3BfillColor%3Dlight-dark(%23CCE5FF%2Cvar(--ge-dark-color%2C%20%23121212))%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%3CmxGeometry%20x%3D%22130%22%20y%3D%22230%22%20width%3D%22230%22%20height%3D%2240%22%20as%3D%22geometry%22%2F%3E%3C%2FmxCell%3E%3C%2Froot%3E%3C%2FmxGraphModel%3E&lt;/span&gt;&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=light-dark(#CCE5FF,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="212.5" y="866" width="230" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-49" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-43" target="xG9b4cZpaKj3J7stmtx5-44" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="472.5" y="886" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="xG9b4cZpaKj3J7stmtx5-43" target="4vynbTDBEwNCiGUKn_Pr-8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1010" y="886" />
+              <mxPoint x="1010" y="1240" />
+              <mxPoint x="473" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-43" value="&lt;b&gt;bdu_full.csv&lt;/b&gt;&lt;div&gt;&lt;b&gt;(Demographics)&lt;/b&gt;&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=light-dark(#CCE5FF,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="502.5" y="866" width="230" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-52" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-44" target="xG9b4cZpaKj3J7stmtx5-51" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-55" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-44" target="xG9b4cZpaKj3J7stmtx5-53" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-56" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-44" target="xG9b4cZpaKj3J7stmtx5-54" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-58" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-44" target="xG9b4cZpaKj3J7stmtx5-57" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="812" y="942" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-44" value="&lt;b&gt;Master Cohort Merge&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="396.88" y="922" width="151.25" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-51" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;Cohort Distribution Check PLWH (N = 8,302) vs PNLWH (N = 16,289)&lt;/b&gt;&lt;/span&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#CCFFCC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="90" y="986" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-53" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;Pattern Prevalence Calculation&amp;nbsp;&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;(% presenting&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;≥ 1 disease per pattern)&lt;/span&gt;&lt;b style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;&lt;/b&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#CCFFCC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="292.5" y="986" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-54" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;Paired Univariate Testing&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;(McNemar Test per Pattern)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#CCFFCC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="492.5" y="986" width="170" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-61" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-57" target="xG9b4cZpaKj3J7stmtx5-60" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-62" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="xG9b4cZpaKj3J7stmtx5-57" target="xG9b4cZpaKj3J7stmtx5-59" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-57" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;Multivariate Risk Estimation Conditional Logistic Regression (clogit)&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Formula: pattern_bool ~ vih_bool&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;+&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp;strata(match_id)&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: light-dark(rgb(204, 255, 204), rgb(255, 255, 255));&quot;&gt;Robust Variance:&amp;nbsp;&lt;/span&gt;cluster(patient_id)&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#CCFFCC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="692.5" y="986" width="240" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-59" value="&lt;b&gt;epidemiological_validation_or_results.csv&lt;/b&gt;&lt;div&gt;(Odds Ratios, 95% CI, p-values)&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=light-dark(#FFCCFF,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="358.75" y="1136" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xG9b4cZpaKj3J7stmtx5-60" value="&lt;b&gt;Forest Plot Visualization&lt;/b&gt;&lt;br&gt;&lt;div&gt;(multimorbidity Pattern Risk in PLWH vs Controls)&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=light-dark(#FFCCFF,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="652.5" y="1136" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="4vynbTDBEwNCiGUKn_Pr-1" target="xG9b4cZpaKj3J7stmtx5-17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-1" value="&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;Clustering Tendency Assessment&lt;/b&gt;&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;(Hopkins Statistic via MDS)&lt;/span&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="80.25" y="510" width="157.5" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="xG9b4cZpaKj3J7stmtx5-13" target="4vynbTDBEwNCiGUKn_Pr-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="160" y="490" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-7" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#E6E6E6,var(--ge-dark-color, #121212));movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="1270" width="650" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-8" value="&lt;b&gt;Script 4: Stratified Visual Analisis&lt;/b&gt;&lt;div&gt;&lt;b&gt;(04_stratifies_heatmaps.R)&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="335.01" y="1270" width="275" height="39" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="4vynbTDBEwNCiGUKn_Pr-12" target="4vynbTDBEwNCiGUKn_Pr-13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-12" value="&lt;b&gt;Cohort Stratification:&amp;nbsp;&lt;/b&gt;&lt;div&gt;Filtering and subgrouping Sex (HOMBRE/MUJER), Age Groups (&amp;lt;45, 45-65, &amp;gt;65) and HIV status (HIV/Control)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="293.13" y="1320" width="358.75" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="4vynbTDBEwNCiGUKn_Pr-13" target="4vynbTDBEwNCiGUKn_Pr-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-13" value="&lt;b&gt;Data Reshaping and Matrix Computation:&amp;nbsp;&lt;/b&gt;&lt;div&gt;Pivoting long format and calculating disease prevalence mean grouped by cluster per stratum.&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="295.13" y="1420" width="356.87" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitPerimeter=0;" edge="1" parent="1" source="4vynbTDBEwNCiGUKn_Pr-15" target="4vynbTDBEwNCiGUKn_Pr-17">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="472.81500000000005" y="1555" as="sourcePoint" />
+            <mxPoint x="327.5000000000001" y="1585" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="473" y="1565" />
+              <mxPoint x="327" y="1565" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="4vynbTDBEwNCiGUKn_Pr-15" target="4vynbTDBEwNCiGUKn_Pr-18">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="472.81500000000005" y="1556" as="sourcePoint" />
+            <mxPoint x="632.5" y="1586" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="473" y="1566" />
+              <mxPoint x="633" y="1566" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-15" value="&lt;b&gt;Iterative export of 12 stratified heatmaps&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="295.63" y="1520" width="354.37" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-17" value="&lt;b&gt;6 heatmaps in png format for women&amp;nbsp;&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=light-dark(#FFCCFF,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="187.5" y="1580" width="280" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="4vynbTDBEwNCiGUKn_Pr-18" value="&lt;b&gt;6 heatmaps in png format for men&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=light-dark(#FFCCFF,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="492.5" y="1580" width="280" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
