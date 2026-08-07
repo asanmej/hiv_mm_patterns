@@ -18,11 +18,16 @@ knitr::opts_chunk$set(
   message = FALSE
 )
 
-```
+```  
+  
+# 1. Introduction  
+Once we have successfully identified and grouped the pathologies into comorbidity patterns (clusters) at the disease level in the previous step, the next  objective is to translate these patterns to the individual patient level.
 
-# 1. Load Input Datasets
+This script is executed to calculate how each specific patient in the cohort is represented within each comorbidity pattern. By doing this, we bridge the gap between disease-level associations and patient-level clinical profiles.  
+  
+# 2. Load Input Datasets
 
-We import:
+We import the necessary files:
 
 1. The binary diagnosis matrix (`diagnosis_bool_prevalent_final.csv`).
 2. The mapped disease patterns derived from the unsupervised clustering step (`jaccard_disease_patterns.csv`).
@@ -37,7 +42,7 @@ disease_patterns <- read_csv( file.path(PATH_INTERMEDIATE,"jaccard_disease_patte
 head(disease_patterns)
 ```
 
-# 2. Calculate Pattern Scores per Patient
+# 3. Calculate Pattern Scores per Patient
 
 We pivot the binary diagnosis matrix to a long format, join it with the assigned clusters, and summarize the total number of conditions each patient presents per pattern.
 
@@ -80,10 +85,9 @@ patient_pattern_scores <- patient_pattern_scores %>%
   ))
 
 head(patient_pattern_scores)
-
 ```
 
-# 3. Summary Statistics of Pattern Scores
+# 4. Summary Statistics of Pattern Scores
 
 We inspect the prevalence and distribution of each comorbidity pattern across the entire cohort.
 
@@ -101,9 +105,9 @@ patient_pattern_scores %>%
 
 ```
 
-# 4. Export Processed Scores
+# 5. Export Processed Scores
 
-We save the resulting dataset containing patient IDs and their respective pattern scores for subsequent epidemiological validation against HIV status.
+We save the resulting dataset containing patient IDs and their respective pattern scores for subsequent validation against HIV status.
 
 ```{r export}
 write_csv(patient_pattern_scores, file.path(PATH_INTERMEDIATE, "patient_pattern_scores.csv"))
