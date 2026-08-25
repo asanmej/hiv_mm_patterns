@@ -29,7 +29,12 @@ pkg <- c(
   ## To evaluate the average silhouette width 
   "cluster",  
   ## Conditional logistic regression
-  "survival" 
+  "survival",
+  
+  ## Interactive data visualization
+  "plotly",
+  ## Saving interactive plots as standalone HTML widgets
+  "htmlwidgets"
 )
 
 # 2. Automatically load and install missing packages
@@ -49,14 +54,26 @@ PATH_PROYECT <- here()
 
 PATH_DATA <- file.path(PATH_PROYECT, "Data")
 PATH_R <- file.path(PATH_PROYECT, "R")
+
 PATH_RESULTS <- file.path(PATH_PROYECT, "Results")
+PATH_RESULTS_LCA <- file.path(PATH_RESULTS, "LCA")
+PATH_RESULTS_TABLES <- file.path(PATH_RESULTS, "Tables")
+PATH_RESULTS_FIGURES <- file.path(PATH_RESULTS, "Figures")
+PATH_RESULTS_FIGURES_LCA <- file.path(PATH_RESULTS_FIGURES, "LCA")
 
 PATH_INTERMEDIATE <- file.path(PATH_PROYECT, "Intermediate_data")
+PATH_INTERMEDIATE_LCA <- file.path(PATH_INTERMEDIATE, "LCA")
 
 ## Output folder are created automatically
 dirs <- c(
   PATH_RESULTS,
-  PATH_INTERMEDIATE
+  PATH_RESULTS_LCA,
+  PATH_RESULTS_TABLES,
+  PATH_RESULTS_FIGURES,
+  PATH_RESULTS_FIGURES_LCA,
+  
+  PATH_INTERMEDIATE,
+  PATH_INTERMEDIATE_LCA
 )
 
 invisible(
