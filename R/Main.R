@@ -10,6 +10,7 @@
 # 3. Render the pattern score calculation per patient
 # 4. Render the epidemiological validation using clogit (HIV vs Controls)
 # 5. Execute stratified visualizations (Heatmaps by sex, age and HIV status)
+# 6. Perform Latent Class Analysis (LCA)
 # -----------------------------------------------------------------------------
 
 # 1. Project and Environment Configuration
@@ -25,4 +26,7 @@ render(file.path(PATH_R,"02_patient_pattern_scoring.Rmd"), output_dir = PATH_RES
 render(file.path(PATH_R, "03_epidemiological_validation.Rmd"), output_dir = PATH_RESULTS)
 
 # 5. Stratified visual analysis
-source("R/04_stratified_heatmaps.R")
+source(file.path(PATH_R, "04_stratified_heatmaps.R"))
+
+# 6. Latent Class Analysis
+source(file.path(PATH_R, "LCA_HIV.R"))
