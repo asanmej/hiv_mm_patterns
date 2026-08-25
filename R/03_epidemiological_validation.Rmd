@@ -1,6 +1,6 @@
 ---
 title: "Epidemiological Validation of Comorbidity Patterns"
-subtitle: "Cross-sectional comparison between HIV cohort and matched controls"
+subtitle: "Cross-sectional comparison between people living with HIV and matched controls"
 author: "Inés García de la Peña Marco"
 date: "`r Sys.Date()`"
 output: 
@@ -21,27 +21,42 @@ knitr::opts_chunk$set(
 )  
 ```  
   
-# 1. Introduction  
-Once we have mapped the identifyied patterns to individual patient profiles in the previous steps, the next step is to validate these patterns.  
-  
-In this script, it is performed a comparative analysis between the HIV cohort (People Living with HIV, PLWH) and the cohort of non-HIV matched controls (NPLWH).  
-  
-By using paired statistical tests, as McNemar tests, and conditional logistic regression models adjusted for matching strata and standard errors, we evaluate if a specific pattern is over or underrepresented in PLWH compared to the control group (NPLWH).  
+# 1. Introduction
+
+Once disease-level comorbidity patterns have been identified through
+hierarchical clustering and mapped onto individual patients, this script
+evaluates whether the resulting patterns differ between people living with
+HIV (PLWH) and their matched controls.
+
+The hierarchical clustering analysis provides candidate solutions with
+k = 3 to k = 7 disease patterns. All candidate solutions are retained in
+the epidemiological validation to allow comparison of the resulting
+associations across different levels of clustering granularity.
+
+For each value of k, two complementary measures of pattern representation
+are evaluated:
+
+1. Binary pattern presence, defined as having at least one disease belonging to the corresponding comorbidity pattern
+2. Proportional pattern representation, defined as the proportion of diseases defining a pattern that are present in the individual
+
+The matched study design is accounted for using conditional logistic
+regression, with matching sets included as strata.  
   
 # 2. Load Input Data and Build Complete Matched Cohort 
    
 We import:  
-- Patient-level pattern scores (`patient_pattern_scores.csv`). 
+- Patient-level pattern scores (`patient_pattern_scores_hierarchical_k3_k7.csv`). 
 - Matched cohort structure 1:2 (`cohort_match_id.csv`).
 - Demographic baseline variables (`bdu_full.csv`).  
   
 ```{r}
 # Load datasets
-scores_df    <- read_csv(file.path(PATH_INTERMEDIATE, "patient_pattern_scores.csv"))
+scores_df    <- read_csv(file.path(PATH_INTERMEDIATE, "patient_pattern_scores_hierarchical_k3_k7.csv"))
 cohort_match <- read_csv(file.path(PATH_DATA, "cohort_match_id.csv"))
 bdu_data     <- read_csv(file.path(PATH_DATA, "bdu_full.csv"))
 
-# Extract cases and controls separately to unify them in a long format
+# Extract cases and controls separately and combine them into a
+# single patient-level representation of the matched cohort
 cases_df <- cohort_match %>% 
   select(match_id, patient_id) %>% 
   distinct()
@@ -50,10 +65,15 @@ controls_df <- cohort_match %>%
   select(match_id, patient_id = control_id) %>% 
   distinct()
 
-# Bind cases and controls into a single matching dataframe
-long_cohort <- bind_rows(cases_df, controls_df)
+# Combine cases and controls while retaining their role within
+# each matched set
+long_cohort <- bind_rows(
+  cases_df %>% mutate(role = "case"),
+  controls_df %>% mutate(role = "control")
+)
 
-# Create master_df including pattern scores and demographics for all patients
+# Combine pattern scores with matching information, HIV status,
+# and selected demographic variables
 master_df <- long_cohort %>% 
   inner_join(scores_df, by = "patient_id") %>% 
   left_join(bdu_data %>% select(patient_id, vih_bool, edad, sexo, indice_privación), by = "patient_id")
@@ -61,143 +81,197 @@ master_df <- long_cohort %>%
 head(master_df)
 ```
 
-# 3. Descriptive Prevalence: HIV vs Matched Controls  
-  
-We verify the matched cohort distribution ($1:2$ sampling structure) and calculate the proportion of individuals presenting at least one condition ($\ge 1$) per comorbidity pattern, stratified by HIV status.  
+# 3. Descriptive Pattern Prevalence: PLWH vs Matched Controls
+
+The matched cohort structure is first examined to verify the distribution
+of cases and controls.
+
+For each candidate clustering solution (k = 3 to k = 7), pattern presence
+is defined as having at least one disease belonging to the corresponding
+comorbidity pattern (`count > 0`).
+
+The prevalence of each pattern is then calculated separately for PLWH and
+matched controls. These descriptive estimates provide an initial
+comparison before fitting conditional logistic regression models.  
   
 ```{r}
-# Validate that Cases (1) and Controls (0) are properly represented in the dataset
+# Validate that the expected case/control structure is represented
+# in the assembled matched cohort
 cohort_counts <- master_df %>% 
   group_by(vih_bool) %>% 
   summarise(
     n_patients = n_distinct(patient_id),
     n_records = n()
   ) %>% 
-  mutate(HIV_Status = if_else(as.logical(vih_bool), "PLWH (Cases)", "PNLWH (Controls)"))
+  mutate(HIV_Status = if_else(as.logical(vih_bool), "PLWH (Cases)", "PNLWH (Matched Controls)"))
 
 print(cohort_counts)
 
-# Summary of pattern prevalence by group
-prevalence_summary <- master_df %>% 
-  group_by(vih_bool) %>% 
+# Summarise pattern prevalence by HIV status.
+# The dataset contains one row per patient, k, and pattern.
+# Pattern presence is defined as having at least one disease
+# belonging to the corresponding pattern (count > 0).
+prevalence_summary <- master_df %>%
+  group_by(k, pattern, vih_bool) %>%
   summarise(
-    n_total = n(),
-    across(ends_with("_bool"), ~ mean(.x) * 100, .names = "prev_{.col}")
-  ) %>% 
-  pivot_longer(
-    cols = starts_with("prev_pattern_"),
-    names_to = "Pattern",
-    values_to = "Prevalence_pct"
-  ) %>% 
+    n_patients = n_distinct(patient_id),
+    n_with_pattern = n_distinct(patient_id[count > 0]),
+    prevalence_pct = mean(count > 0) * 100,
+    .groups = "drop"
+  ) %>%
   mutate(
-    Pattern = str_replace(Pattern, "prev_pattern_", "Pattern "),
-    Pattern = str_replace(Pattern, "_bool", ""),
-    HIV_Status = if_else(as.logical(vih_bool), "PLWH", "PNLWH")
+    HIV_Status = if_else(
+      as.logical(vih_bool),
+      "PLWH (Cases)",
+      "PNLWH (Matched Controls)"
+    ),
+    Pattern = paste0("Pattern ", pattern)
+  ) %>%
+  select(
+    k,
+    HIV_Status,
+    Pattern,
+    n_patients,
+    n_with_pattern,
+    prevalence_pct
   )
 
-prevalence_summary %>% 
-  select(HIV_Status, Pattern, Prevalence_pct) %>% 
-  pivot_wider(names_from = HIV_Status, values_from = Prevalence_pct)
+print(prevalence_summary)
 ```
   
-  
-# 4. Univariate Statistical Testing (Paired Comparisons)  
-  
-We test for significant differences between PLWH cases and matched controls using McNemar's test for binary pattern flags.  
+# 4. Conditional Logistic Regression: Binary Pattern Presence
+
+Conditional logistic regression is used to estimate the association between HIV status and the presence of each comorbidity pattern.
+
+For each candidate clustering solution and pattern, pattern presence is
+defined as having at least one disease belonging to that pattern
+(`count > 0`).
+
+The models are stratified by matching set (`match_id`) to account for the
+1:2 matched study design. The resulting odds ratios quantify the relative
+odds of pattern presence among PLWH compared with their matched controls (PNLWH).
   
 ```{r}
-# Identify pattern boolean columns
-pattern_bool_cols <- names(master_df)[str_detect(names(master_df), "^pattern_\\d+_bool$")]
-
-# Transform to wide format by match_id (Cases "1" vs Controls "0")
-paired_data <- master_df %>% 
-  mutate(vih_str = if_else(as.logical(vih_bool), "1", "0")) %>% 
-  select(match_id, vih_str, all_of(pattern_bool_cols)) %>% 
-  pivot_wider(
-    id_cols = match_id,
-    names_from = vih_str,
-    values_from = all_of(pattern_bool_cols),
-    names_prefix = "hiv_",
-    values_fn = list
-  ) %>% 
-  mutate(across(-match_id, ~ map_dbl(.x, ~ if (length(.x) > 0) .x[1] else NA_real_)))
-
-# Execute McNemar Test
-mcnemar_results <- map_dfr(pattern_bool_cols, function(col) {
-  col_hiv  <- paste0(col, "_hiv_1")
-  col_ctrl <- paste0(col, "_hiv_0")
+or_results <- map_dfr(k_candidates, function(current_k) {
   
-  if (!all(c(col_hiv, col_ctrl) %in% names(paired_data))) {
-    return(data.frame(Pattern = str_replace(col, "_bool", ""), p_value = NA_real_))
-  }
+  patterns_in_k <- unique(master_df$pattern[master_df$k == current_k])
   
-  tbl <- table(paired_data[[col_hiv]], paired_data[[col_ctrl]])
-  mcn <- tryCatch(mcnemar.test(tbl), error = function(e) NULL)
-  
-  data.frame(
-    Pattern = str_replace(col, "_bool", ""),
-    p_value = if (!is.null(mcn)) mcn$p.value else NA_real_
-  )
+  map_dfr(patterns_in_k, function(p_idx) {
+    
+    # Create a binary indicator of pattern presence for the
+    # current patient-pattern combination
+    df_temp <- master_df %>%
+      filter(k == current_k, pattern == p_idx) %>%
+      mutate(pattern_bin = if_else(count > 0, 1, 0))
+    
+    # Require a minimum number of individuals with the pattern
+    # before attempting model estimation
+    if(sum(df_temp$pattern_bin == 1, na.rm = TRUE) < 5) return(NULL)
+    
+    fit <- tryCatch({
+      clogit(vih_bool ~ pattern_bin + strata(match_id), data = df_temp, method = "efron")
+    }, error = function(e) NULL)
+    
+    if(is.null(fit)) return(NULL)
+    
+    res <- summary(fit)
+    
+    data.frame(
+      k        = current_k,
+      Pattern  = p_idx,
+      OR       = res$coefficients[1, "exp(coef)"],
+      CI_lower = res$conf.int[1, "lower .95"],
+      CI_upper = res$conf.int[1, "upper .95"],
+      p_value  = res$coefficients[1, "Pr(>|z|)"]
+    )
+  })
 })
 
-mcnemar_results <- mcnemar_results %>% 
+# Adjust p-values across all tested k-pattern associations
+# using the Benjamini-Hochberg false discovery rate procedure
+or_results <- or_results %>%
   mutate(p_adj = p.adjust(p_value, method = "BH"))
 
-print(mcnemar_results)
-```
-  
-
-# 5. Multivariate Regression: Odds Ratios per Pattern  
-  
-We fit Conditional Logistic Regression models (`clogit`) stratified by matching set (`match_id`) with robust variance estimation (`cluster(patient_id)`) to account for $1:2$ control sampling with replacement.  
-  
-```{r}
-# Long-format estimation of conditional logistic regressions per pattern
-or_results <- map_dfr(pattern_bool_cols, function(col_name) {
-  # Response variable is vih_bool and explanatory variable is the pattern flag
-  formula_str <- paste0("vih_bool ~ ", col_name, " + strata(match_id)")
-  
- # Fit conditional logistic regression with method = "efron" to allow robust cluster SEs
-  fit <- clogit(
-    as.formula(formula_str), 
-    data = master_df, 
-    cluster = patient_id,
-    method = "efron"
-  )
-  
-  res <- summary(fit)
-  
-  data.frame(
-    Pattern  = str_replace(col_name, "_bool", ""),
-    OR       = res$coefficients[1, "exp(coef)"],
-    CI_lower = res$conf.int[1, "lower .95"],
-    CI_upper = res$conf.int[1, "upper .95"],
-    p_value  = res$coefficients[1, "Pr(>|z|)"]
-  )
-})
-
-# Display numeric results
 print(or_results)
 
-# Forest plot of Odds Ratios
-ggplot(or_results, aes(x = OR, y = Pattern)) +
-  geom_point(size = 3, color = "#2c3e50") +
-  geom_errorbarh(aes(xmin = CI_lower, xmax = CI_upper), height = 0.2, color = "#2c3e50") +
+# Forest Plot
+ggplot(or_results, aes(x = OR, y = factor(Pattern), color = factor(k))) +
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbarh(aes(xmin = CI_lower, xmax = CI_upper), height = 0.2, position = position_dodge(width = 0.5)) +
   geom_vline(xintercept = 1, linetype = "dashed", color = "red") +
   scale_x_log10() +
   labs(
-    title = "Comorbidity Pattern Risk in PLWH vs. Matched Controls",
-    subtitle = "Conditional Logistic Regression stratified by match_id (Robust Cluster SE)",
+    title = "Association Between Comorbidity Pattern Presence and HIV Status",
+    subtitle = "Conditional logistic regression stratified by matching set",
     x = "Odds Ratio (log scale)",
-    y = "Pattern Cluster"
+    y = "Comorbidity Pattern",
+    color = "Number of clusters (k)"
   ) +
   theme_minimal()
 ```  
+# 5. Complementary Analysis: Proportional Pattern Representation  
   
-# 6. Export Validation Results  
-We save the resulting statistical validation table:  
+For each patient and pattern, the score represents the proportion of
+diseases defining that pattern that are present in the individual and
+therefore ranges from 0 to 1.
+
+The conditional logistic regression coefficient represents the change in
+odds of being a PLWH associated with a one-unit increase in this score,
+corresponding to a change from 0 to 1 in proportional pattern
+representation.
+
+This analysis complements the binary pattern-presence analysis by
+considering the degree of representation of each pattern rather than only
+whether at least one defining disease is present.  
   
 ```{r}
-write_csv(or_results, 
-          file.path(PATH_RESULTS,"epidemiological_validation_or_results.csv"))
+# Fit conditional logistic regression models using the proportional
+# pattern score as a continuous predictor
+score_or_results <- map_dfr(k_candidates, function(current_k) {
+  
+  patterns_in_k <- unique(master_df$pattern[master_df$k == current_k])
+  
+  map_dfr(patterns_in_k, function(p_idx) {
+    
+    df_temp <- master_df %>%
+      filter(k == current_k, pattern == p_idx)
+    
+    fit <- tryCatch({
+      clogit(vih_bool ~ proportion + strata(match_id), data = df_temp, method = "efron")
+    }, error = function(e) NULL)
+    
+    if(is.null(fit)) return(NULL)
+    
+    res <- summary(fit)
+    
+    data.frame(
+      k           = current_k,
+      Pattern     = p_idx,
+      OR_per_unit = res$coefficients[1, "exp(coef)"],
+      CI_lower    = res$conf.int[1, "lower .95"],
+      CI_upper    = res$conf.int[1, "upper .95"],
+      p_value     = res$coefficients[1, "Pr(>|z|)"]
+    )
+  })
+})
+
+# Adjust p-values across all tested k-pattern associations
+# using the Benjamini-Hochberg false discovery rate procedure
+score_or_results <- score_or_results %>%
+  mutate(p_adj = p.adjust(p_value, method = "BH"))
+
+print(score_or_results)
+```  
+  
+# 6. Export Validation Results  
+  
+The results from both complementary analyses are exported:
+
+1. Odds ratios for binary pattern presence
+2. Odds ratios associated with continuous proportional pattern
+   representation  
+   
+```{r}
+write_csv(or_results, file.path(PATH_RESULTS, "epidemiological_validation_binary_or.csv"))
+write_csv(score_or_results, file.path(PATH_RESULTS, "epidemiological_validation_score_or.csv"))
 ```  
