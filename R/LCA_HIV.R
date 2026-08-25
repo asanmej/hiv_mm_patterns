@@ -27,8 +27,8 @@ if (!requireNamespace("MMLCA", quietly = TRUE)) {
   devtools::install_github("ARCbiostat/MMLCA")
 }
 
-if (!requireNamespace("MMLCA", quietly = TRUE)) {
-  devtools::install_github("ARCbiostat/MMLCA")
+if (!requireNamespace("ggsankey", quietly = TRUE)) {
+  devtools::install_github("davidsjoberg/ggsankey")
 }
 
 library(ggsankey)
@@ -242,13 +242,13 @@ prev_sol3 <- ggprev_spaghetti(res$obj[[1]])
 
 # 5.4 Customize the prevalence plot
 prev_sol3.2 <- prev_sol3 +
-                ggplot2::theme(
+              ggplot2::theme(
                 axis.text.x = ggplot2::element_text(
                   angle = 45,
                   hjust = 1,
                   margin = ggplot2::margin(t = -5)
-                  )
                 )
+              )
 
 prev_sol3.3 <- prev_sol3 +
   ggplot2::theme(
