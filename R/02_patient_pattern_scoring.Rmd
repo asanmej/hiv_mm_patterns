@@ -1,0 +1,283 @@
+---
+title: "Patient Pattern Scoring"
+subtitle: "Mapping disease clusters onto individual patient profiles"
+author: "Inés García de la Peña Marco"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: readable
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE
+)
+
+```  
+  
+# 1. Introduction  
+Once disease-level comorbidity patterns have been identified through hierarchical clustering, this script maps those disease patterns onto individual patients.
+
+For each candidate clustering solution (k = 3 to 7), each patient receives a pattern-specific score based on the proportion of diseases defining that pattern that are present in the patient.
+
+The resulting patient-level scores are retained for all candidate values of k. This allows the hierarchical clustering results to be evaluated at the same levels of granularity.  
+  
+A dominant pattern is also derived when one pattern has the highest score for a given patient and k. This is used only as a summary representation and does not imply that a patient belongs exclusively to a single comorbidity pattern.
+  
+# 2. Load Input Datasets
+
+We import the necessary files:
+
+1. The binary diagnosis matrix (`diagnosis_bool_prevalent_final.csv`).
+2. The disease-cluster assignments obtained from hierarchical clustering
+   for all candidate solutions (k = 3 to 7)
+   (`jaccard_disease_patterns_multi_k.csv`).  
+  
+The clustering output determines which diseases belong to each pattern,
+while the patient diagnosis matrix determines which of those diseases are
+present in each individual
+
+```{r load-data}
+# 1. Load patient diagnostic matrix
+diag_data <- read_csv(PATH_DIAG_BOOL_PREVALENT_FINAL)
+
+# 2. Load disease-cluster assignments for all candidate k values
+disease_patterns_multi <- read_csv(
+  file.path(
+    PATH_INTERMEDIATE,
+    "jaccard_disease_patterns_multi_k.csv"
+  )
+) 
+ 
+# Identify the disease variables used in hierarchical clustering
+disease_vars <- disease_patterns_multi$enfermedad
+
+# Check that every disease included in the clustering is also available
+# in the patient-level diagnostic matrix
+# The analysis is stopped if any disease is missing to prevent an
+# incomplete or inconsistent patient-pattern mapping
+missing_diseases <- setdiff(disease_vars, names(diag_data))
+
+if (length(missing_diseases) > 0) {
+  stop(
+    "The following diseases from the clustering output are missing ",
+    "from the diagnostic matrix: ",
+    paste(missing_diseases, collapse = ", ")
+  )
+}
+
+# Retain only the patient identifier and the disease variables used
+# in the hierarchical clustering analysis
+diag_data <- diag_data %>%
+  select(patient_id, all_of(disease_vars))
+```
+
+# 3. Calculate Pattern Scores per Patient
+
+The patient-level diagnostic matrix is converted to long format so that
+each row represents one patient-disease combination.
+
+The disease-to-cluster assignments are then joined to determine which
+comorbidity pattern each disease belongs to for every candidate value of k.
+
+For each patient, the number of diseases present within each pattern is counted. This count is subsequently divided by the total number of diseases defining that pattern, producing a proportional pattern score ranging from 0 to 1.
+
+A score of 1 therefore indicates that the patient has all diseases defining that pattern, whereas a score of 0 indicates that none of the diseases defining the pattern are present.
+
+```{r compute-scores}
+# Define the candidate numbers of clusters evaluated in the
+# hierarchical clustering analysis
+k_candidates <- 3:7
+
+# Expected column names containing the disease-to-cluster assignments
+# for each candidate clustering solution
+required_cluster_cols <- paste0("cluster_k", k_candidates)
+
+# Validate that all required clustering solutions are available
+missing_cluster_cols <- setdiff(
+  required_cluster_cols,
+  names(disease_patterns_multi)
+)
+
+if (length(missing_cluster_cols) > 0) {
+  stop(
+    "Missing clustering columns in disease pattern file: ",
+    paste(missing_cluster_cols, collapse = ", ")
+  )
+}
+
+# Ensure that each patient appears only once in the diagnostic matrix.
+# Duplicate patient identifiers could otherwise lead to incorrect
+# patient-level pattern scores
+if (anyDuplicated(diag_data$patient_id) > 0) {
+  stop("patient_id is not unique in the diagnostic matrix.")
+}
+
+# Convert the disease-to-cluster assignments from wide to long format
+# Each row represents one disease assigned to one pattern for a given k
+disease_patterns_long <- disease_patterns_multi %>%
+  pivot_longer(
+    cols = all_of(required_cluster_cols),
+    names_to = "k",
+    names_pattern = "cluster_k(\\d+)",
+    values_to = "pattern"
+  ) %>%
+  mutate(
+    k = as.integer(k),
+    pattern = as.integer(pattern)
+  )
+
+# Calculate the number of diseases defining each pattern for each
+# candidate value of k.
+
+# Total number of diseases included in the clustering analysis
+n_total_diseases <- length(disease_vars)
+
+# Calculate the relative size of each pattern
+cluster_sizes <- disease_patterns_long %>%
+  count(k, pattern, name = "n_diseases") %>%
+  mutate(
+    pattern_weight = n_diseases / n_total_diseases
+  )
+
+# Convert the patient-level diagnostic matrix to long format.
+# Only diseases that are present are retained because absent diseases
+# contribute zero to the pattern-specific count
+patient_diagnoses_long <- diag_data %>%
+  pivot_longer(
+    cols = -patient_id,
+    names_to = "enfermedad",
+    values_to = "has_disease"
+  ) %>%
+  filter(has_disease == 1) %>%
+  select(patient_id, enfermedad)
+
+# Count the number of diseases present in each patient-pattern
+# combination for every candidate value of k
+patient_pattern_scores_long <- patient_diagnoses_long %>%
+  inner_join(
+    disease_patterns_long,
+    by = "enfermedad",
+    relationship = "many-to-many"
+  ) %>%
+  count(
+    patient_id,
+    k,
+    pattern,
+    name = "count"
+  )
+
+# Create complete patient x k x pattern grid
+all_patient_patterns <- expand_grid(
+  patient_id = diag_data$patient_id,
+  k = k_candidates
+) %>%
+  left_join(
+    disease_patterns_long %>%
+      distinct(k, pattern),
+    by = "k"
+  )
+
+# Add zero counts for patient-pattern combinations without any
+# observed diseases and calculate the proportional pattern score
+patient_pattern_scores_long <- all_patient_patterns %>%
+  left_join(
+    patient_pattern_scores_long,
+    by = c("patient_id", "k", "pattern"),
+    relationship = "one-to-one"
+  ) %>%
+  left_join(
+    cluster_sizes,
+    by = c("k", "pattern"),
+    relationship = "many-to-one"
+  ) %>%
+  mutate(
+    count = replace_na(count, 0L),
+    proportion = count / n_diseases,
+    pattern_weight = n_diseases / n_total_diseases,
+    weighted_score = proportion * pattern_weight
+  ) %>%
+  arrange(k, patient_id, pattern)
+```  
+  
+# 4. Pattern Representation and Dominant Pattern
+
+For each patient, the proportional pattern score represents the proportion
+of diseases defining a given pattern that are present in that patient. For example, if a pattern contains 10 diseases and a patient has 4 of
+those diseases, the corresponding pattern score is 0.40.
+
+This score ranges from 0 to 1 and is calculated independently for each
+candidate number of clusters (k = 3 to 7).
+
+A dominant pattern can optionally be derived as the pattern with the
+highest proportional score within each k. This assignment is a derived
+summary and does not imply that patients belong exclusively to a single
+comorbidity pattern.
+  
+```{r}
+# Determine the dominant pattern within each patient and
+# candidate clustering solution
+patient_pattern_scores_long <- patient_pattern_scores_long %>%
+  group_by(patient_id, k) %>%
+  mutate(
+    # Highest proportional representation across patterns
+    max_score = max(weighted_score, na.rm = TRUE),
+    
+    # Number of patterns sharing the maximum score
+    n_max = sum(
+      weighted_score == max_score & max_score > 0,
+      na.rm = TRUE
+    ),
+    
+    # Assign a dominant pattern only when the maximum is unique
+    # and greater than zero
+    dominant_pattern = case_when(
+      max_score == 0 ~ NA_integer_,
+      n_max > 1 ~ NA_integer_,
+      TRUE ~ pattern[which.max(weighted_score)]
+    )
+  ) %>%
+  ungroup()
+```
+
+# 5. Summary Statistics of Pattern Scores
+
+We inspect the prevalence and distribution of each comorbidity pattern across the entire cohort.
+
+```{r summary-stats}
+# Distribution of proportional pattern scores
+patient_pattern_scores_long %>%
+  group_by(k, pattern) %>%
+  summarise(
+    # Number of patients with at least one disease belonging
+    # to the corresponding pattern
+    n_patients = sum(count > 0),
+    
+    # Mean and median proportional representation of the pattern
+    # across the entire cohort
+    mean_proportion = mean(proportion, na.rm = TRUE),
+    median_proportion = median(proportion, na.rm = TRUE),
+    
+    # Standard deviation of the proportional scor
+    sd_proportion = sd(proportion, na.rm = TRUE),
+    
+    # Percentage of the entire cohort with at least one disease
+    # belonging to the corresponding pattern
+    pattern_presence_pct = mean(count > 0) * 100,
+    .groups = "drop"
+  )
+```
+
+# 6. Export Processed Scores
+
+Save the finalized dataset containing scores, proportions, and assigned clusters.
+
+```{r export}
+write_csv(patient_pattern_scores_long, file.path(PATH_INTERMEDIATE, "patient_pattern_scores_hierarchical_k3_k7.csv"))
+```
+
