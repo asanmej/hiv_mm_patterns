@@ -70,7 +70,17 @@ controls_df <- cohort_match %>%
 long_cohort <- bind_rows(
   cases_df %>% mutate(role = "case"),
   controls_df %>% mutate(role = "control")
-)
+) %>%
+  group_by(match_id) %>%
+  mutate(
+    n_controls = sum(role == "control"),
+    weight = if_else(
+      role == "case",
+      1,
+      1 / n_controls
+    )
+  ) %>%
+  ungroup()
 
 # Combine pattern scores with matching information, HIV status,
 # and selected demographic variables
@@ -166,10 +176,22 @@ or_results <- map_dfr(k_candidates, function(current_k) {
     
     # Require a minimum number of individuals with the pattern
     # before attempting model estimation
-    if(sum(df_temp$pattern_bin == 1, na.rm = TRUE) < 5) return(NULL)
+    n_pattern_plwh <- sum(
+      df_temp$pattern_bin == 1 & df_temp$vih_bool == 1,
+      na.rm = TRUE
+    )
+    
+    n_pattern_pnlwh <- sum(
+      df_temp$pattern_bin == 1 & df_temp$vih_bool == 0,
+      na.rm = TRUE
+    )
+    
+    if (n_pattern_plwh < 5 | n_pattern_pnlwh < 5) {
+      return(NULL)
+    }
     
     fit <- tryCatch({
-      clogit(vih_bool ~ pattern_bin + strata(match_id), data = df_temp, method = "efron")
+      clogit(vih_bool ~ pattern_bin + strata(match_id), data = df_temp, weights = weight, method = "efron")
     }, error = function(e) NULL)
     
     if(is.null(fit)) return(NULL)
@@ -237,7 +259,7 @@ score_or_results <- map_dfr(k_candidates, function(current_k) {
       filter(k == current_k, pattern == p_idx)
     
     fit <- tryCatch({
-      clogit(vih_bool ~ proportion + strata(match_id), data = df_temp, method = "efron")
+      clogit(vih_bool ~ proportion + strata(match_id), data = df_temp, weights = weight, method = "efron")
     }, error = function(e) NULL)
     
     if(is.null(fit)) return(NULL)
