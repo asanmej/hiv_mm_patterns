@@ -134,9 +134,16 @@ disease_patterns_long <- disease_patterns_multi %>%
 
 # Calculate the number of diseases defining each pattern for each
 # candidate value of k.
-# This value is required to calculate the proportional pattern score
+
+# Total number of diseases included in the clustering analysis
+n_total_diseases <- length(disease_vars)
+
+# Calculate the relative size of each pattern
 cluster_sizes <- disease_patterns_long %>%
-  count(k, pattern, name = "n_diseases")
+  count(k, pattern, name = "n_diseases") %>%
+  mutate(
+    pattern_weight = n_diseases / n_total_diseases
+  )
 
 # Convert the patient-level diagnostic matrix to long format.
 # Only diseases that are present are retained because absent diseases
@@ -191,7 +198,9 @@ patient_pattern_scores_long <- all_patient_patterns %>%
   ) %>%
   mutate(
     count = replace_na(count, 0L),
-    proportion = count / n_diseases
+    proportion = count / n_diseases,
+    pattern_weight = n_diseases / n_total_diseases,
+    weighted_score = proportion * pattern_weight
   ) %>%
   arrange(k, patient_id, pattern)
 ```  
@@ -217,11 +226,11 @@ patient_pattern_scores_long <- patient_pattern_scores_long %>%
   group_by(patient_id, k) %>%
   mutate(
     # Highest proportional representation across patterns
-    max_score = max(proportion, na.rm = TRUE),
+    max_score = max(weighted_score, na.rm = TRUE),
     
     # Number of patterns sharing the maximum score
     n_max = sum(
-      proportion == max_score & max_score > 0,
+      weighted_score == max_score & max_score > 0,
       na.rm = TRUE
     ),
     
@@ -230,7 +239,7 @@ patient_pattern_scores_long <- patient_pattern_scores_long %>%
     dominant_pattern = case_when(
       max_score == 0 ~ NA_integer_,
       n_max > 1 ~ NA_integer_,
-      TRUE ~ pattern[which.max(proportion)]
+      TRUE ~ pattern[which.max(weighted_score)]
     )
   ) %>%
   ungroup()
