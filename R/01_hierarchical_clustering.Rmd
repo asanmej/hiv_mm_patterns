@@ -285,14 +285,21 @@ facilitate visual identification of the corresponding disease groups.
 # Graph the dendrogram of pathologies
 dend <- as.dendrogram(hc_diseases)
 
-# Customize size and colors
-dend %>% 
-  set("labels_cex", 0.6) %>% 
-  set("branches_k_color", k = k_reference) %>% 
-  plot(
-    main = "Comorbidity Pattern Dendrogram (Jaccard + ward.D2)",
-    ylab = "Height (Jaccard Distance)"
-  )
+# Customize label size
+dend <- dendextend::set(dend,"labels_cex",0.6)
+
+# Color branches according to the reference solution
+dend <- dendextend::color_branches(
+  dend,
+  k = k_reference
+)
+
+# Plot dendrogram
+plot(
+  dend,
+  main = "Comorbidity Pattern Dendrogram (Jaccard + ward.D2)",
+  ylab = "Height (Jaccard Distance)"
+)
 ```  
   
 # 8. Reference Pattern Extraction and Export  
