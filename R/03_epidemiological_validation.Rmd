@@ -186,7 +186,7 @@ or_results <- map_dfr(k_candidates, function(current_k) {
       na.rm = TRUE
     )
     
-    if (n_pattern_plwh < 5 | n_pattern_pnlwh < 5) {
+    if (n_pattern_plwh < 20 | n_pattern_pnlwh < 20) {
       return(NULL)
     }
     
@@ -231,69 +231,10 @@ ggplot(or_results, aes(x = OR, y = factor(Pattern), color = factor(k))) +
   ) +
   theme_minimal()
 ```  
-# 5. Complementary Analysis: Proportional Pattern Representation  
-  
-For each patient and pattern, the score represents the proportion of
-diseases defining that pattern that are present in the individual and
-therefore ranges from 0 to 1.
 
-The conditional logistic regression coefficient represents the change in
-odds of being a PLWH associated with a one-unit increase in this score,
-corresponding to a change from 0 to 1 in proportional pattern
-representation.
+# 5. Export Validation Results  
+  
+The results from both complementary analyses are exported odds ratios for binary pattern presence.
 
-This analysis complements the binary pattern-presence analysis by
-considering the degree of representation of each pattern rather than only
-whether at least one defining disease is present.  
-  
-```{r}
-# Fit conditional logistic regression models using the proportional
-# pattern score as a continuous predictor
-score_or_results <- map_dfr(k_candidates, function(current_k) {
-  
-  patterns_in_k <- unique(master_df$pattern[master_df$k == current_k])
-  
-  map_dfr(patterns_in_k, function(p_idx) {
-    
-    df_temp <- master_df %>%
-      filter(k == current_k, pattern == p_idx)
-    
-    fit <- tryCatch({
-      clogit(vih_bool ~ proportion + strata(match_id), data = df_temp, weights = weight, method = "efron")
-    }, error = function(e) NULL)
-    
-    if(is.null(fit)) return(NULL)
-    
-    res <- summary(fit)
-    
-    data.frame(
-      k           = current_k,
-      Pattern     = p_idx,
-      OR_per_unit = res$coefficients[1, "exp(coef)"],
-      CI_lower    = res$conf.int[1, "lower .95"],
-      CI_upper    = res$conf.int[1, "upper .95"],
-      p_value     = res$coefficients[1, "Pr(>|z|)"]
-    )
-  })
-})
-
-# Adjust p-values across all tested k-pattern associations
-# using the Benjamini-Hochberg false discovery rate procedure
-score_or_results <- score_or_results %>%
-  mutate(p_adj = p.adjust(p_value, method = "BH"))
-
-print(score_or_results)
-```  
-  
-# 6. Export Validation Results  
-  
-The results from both complementary analyses are exported:
-
-1. Odds ratios for binary pattern presence
-2. Odds ratios associated with continuous proportional pattern
-   representation  
-   
 ```{r}
 write_csv(or_results, file.path(PATH_RESULTS, "epidemiological_validation_binary_or.csv"))
-write_csv(score_or_results, file.path(PATH_RESULTS, "epidemiological_validation_score_or.csv"))
-```  
