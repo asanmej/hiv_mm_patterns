@@ -791,14 +791,39 @@ model_selection_table <- bind_rows(
 
 model_selection_table <- model_selection_table %>%
   mutate(
+    # Convert numeric columns from character to numeric
     across(
-      any_of(c("nclass", "nclasses", "classes", "k")),
-      ~ as.integer(.x)
+      c(
+        nclass,
+        log_likelihood,
+        df,
+        BIC,
+        AIC,
+        CAIC,
+        ABIC,
+        likelihood_ratio,
+        `Assignment accuracy (%)`,
+        Entropy
+      ),
+      as.numeric
     ),
+    
+    # Format numerical values
     across(
-      any_of(c("AIC", "BIC", "entropy")),
-      ~ round(.x, 3)
-    )
+      c(
+        log_likelihood,
+        BIC,
+        AIC,
+        CAIC,
+        ABIC,
+        likelihood_ratio
+      ),
+      ~round(.x, 3)
+    ),
+    
+    # Convert proportions to percentages
+    `Assignment accuracy (%)` = round(`Assignment accuracy (%)` * 100, 1),
+    Entropy = round(Entropy * 100, 1)
   )
 
 write_xlsx(
