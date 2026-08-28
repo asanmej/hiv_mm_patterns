@@ -125,6 +125,8 @@ saveRDS(
   file.path(PATH_INTERMEDIATE_LCA, "diseases_bl.rds")
 )
 
+# 1.9 A reproducible random seed is set
+set.seed(202112)
 
 # 2. LATENT CLASS ANALYSIS DATA PREPARATION
 
@@ -176,7 +178,7 @@ model_selection_results <- list()
 patient_class_results <- list()
 
 # 2.4 Start stratified LCA
-for (i in seq_len(nrow(strata))) {
+for (i in seq_len(nrow(strata))){
   
   # 2.4.0 Define current stratum
   sexo_actual <- strata$sexo_val[i]
@@ -293,6 +295,8 @@ for (i in seq_len(nrow(strata))) {
     dis_cols = dis_column_names
   )
   
+  names(X) <- make.names(names(X))
+  
   # 2.4.8 Select diseases based on minimum prevalence
   
   # Only diseases with a prevalence of at least 2% are considered for the LCA
@@ -306,48 +310,37 @@ for (i in seq_len(nrow(strata))) {
     next
   }
   
-  # 3. LATENT CLASS MODEL SELECTION
+  # 3.1 Fit LCA models with different numbers of latent classes
   
-  # 3.1 Define the training and test datasets
+  # Models containing between 3 and 7 latent classes are fitted using the
+  # complete set of eligible patients within the current stratum.
   
-  # A reproducible random seed is set before splitting the data so that the same
-  # training/test partition can be reproduced in subsequent analyses.
-  set.seed(202112+i)
-  
-  # Approximately 70% of the observations are used to estimate the LCA models,
-  # while the remaining 30% are retained as an independent test subset for
-  # evaluating classification performance.
-  train <- sample(1:nrow(X), round(nrow(X) * 0.7))
-  test <- setdiff(1:nrow(X), train)
-  
-  # 3.2 Fit LCA models with different numbers of latent classes
-  
-  # Models containing between 3 and 7 latent classes are fitted to evaluate
-  # alternative multimorbidity structures.
-  
-  # Five repetitions are used for each number of classes to reduce the risk of
-  # selecting a solution resulting from a local optimum of the likelihood
+  # Five repetitions are used for each number of classes to reduce the risk
+  # of selecting a solution resulting from a local optimum of the likelihood
   # function.
   
   # The disease indicators previously selected according to the 2% prevalence
   # threshold are used as the observed variables defining the latent classes.
   res <- select_number_LCA(
     nclasses = k_candidates,
-    X = X[train, ],
+    X = X,
     conditions = disease_names,
     nrep = nrep
   )
   
-  # 3.3 Store model-selection results
+  # 3.2 Store model-selection results
   lca_results[[stratum_name]] <- res
   model_selection_results[[stratum_name]] <- res$metrics
   
-  # 3.4 Save fitted models for current stratum
-  save(res,disease_names,original_ids,
-       file = file.path(
-         stratum_models,
-         paste0("ResultsLCA_",stratum_name,".RData")
-       )
+  # 3.3 Save fitted models for current stratum
+  save(
+    res,
+    disease_names,
+    original_ids,
+    file = file.path(
+      stratum_models,
+      paste0("ResultsLCA_", stratum_name, ".RData")
+    )
   )
   
   # 4. MODEL SELECTION VISUALIZATION
@@ -363,342 +356,409 @@ for (i in seq_len(nrow(strata))) {
   dpi = 300
   )
   
-  # 4.2 Evaluate classification accuracy
-  plot_traintest <- ggaccuracy_LCA(res)
+  # 4.2 Identify candidate latent class solutions for evaluation
   
-  ggplot2::ggsave(filename = file.path(
-    stratum_figures,
-    paste0("comparacion_traintest_",stratum_name,".png")
-  ),
-  plot = plot_traintest,
-  width = 6,
-  height = 4,
-  dpi = 300
-  )
+  # Three solutions are selected for further evaluation within each stratum:
+  # 1) the solution with the minimum AIC,
+  # 2) the solution with the minimum entropy,
+  # 3) the solution with one additional latent class compared with the
+  #    minimum-entropy solution.
+  #
+  # If two or more criteria identify the same number of classes, the duplicate
+  # solution is evaluated only once.
   
-  # 4.3 Select optimal latent class solution
+  metrics <- as.data.frame(res$metrics)
   
-  # The optimal solution is selected according to the model-selection
-  # metrics returned by MMLCA.
-  
-  # Here, the solution with the minimum BIC is selected.
-  
-  metrics <- res$metrics
-  
-  bic_column <- names(metrics)[
+  # Identify AIC column
+  aic_column <- names(metrics)[
     str_detect(
       names(metrics),
-      regex("^BIC$",ignore_case = TRUE)
+      regex("^AIC$", ignore_case = TRUE)
     )
   ]
   
-  if (length(bic_column) == 0) {
-    stop("BIC column could not be identified in res$metrics for ",stratum_name
-    )
+  if (length(aic_column) == 0) {
+    stop("AIC column could not be identified in res$metrics for ",stratum_name)
   }
   
-  best_index <- which.min(metrics[[bic_column[1]]])
-  
-  modelo_optimo <- res$obj[[best_index]]
-  
-  nclass_optimo <- nrow(modelo_optimo$probs[[1]])
-  
-  message("Optimal solution: ",nclass_optimo," latent classes.")
-  
-  # 5. INTERPRETATION OF THE OPTIMAL LATENT SOLUTION
-  
-  # 5.1 Method 1: Observed-to-expected enrichment
-  OEx_optimo <- ggOEx(modelo_optimo, table = FALSE)
-  ggplot2::ggsave(filename = file.path(stratum_figures, paste0("metodo1",nclass_optimo,"LC_",stratum_name,".jpg")), 
-                  plot = OEx_optimo, 
-                  width = 30, 
-                  height = 20, 
-                  dpi = 300)
-  
-  # 5.2 Method 2: Observed-to-expected disease associations
-  OE_optimo <- ggOE(modelo_optimo, table = FALSE)
-  ggplot2::ggsave(filename = file.path(stratum_figures, paste0("metodo2",nclass_optimo,"LC_",stratum_name,".jpg")), 
-                  plot = OE_optimo, 
-                  width = 28, 
-                  height = 22, 
-                  dpi = 300)
-  
-  # 5.3 Method 3: Disease prevalence profiles across latent classes
-  prev_optimo <- ggprev_spaghetti(modelo_optimo)
-  
-  # 5.4 Customize the prevalence plot
-  prev_optimo <- prev_optimo +
-    ggplot2::theme(
-      axis.text.x = ggplot2::element_text(
-        angle = 45,
-        hjust = 1
-      ),
-      axis.title.x = ggplot2::element_blank(),
-      axis.ticks.length.x = grid::unit(0.1,"cm"),
-      plot.margin = ggplot2::margin(t = 5,r = 5,b = 0,l = 5)
+  # Identify entropy column
+  entropy_column <- names(metrics)[
+    str_detect(
+      names(metrics),
+      regex("entropy", ignore_case = TRUE)
     )
+  ]
   
-  # 5.5 Save the prevalence profile figure
-  ggplot2::ggsave(
-    filename = file.path(stratum_figures,paste0("prev_",nclass_optimo,"LC_",stratum_name,".jpg")),
-    plot = prev_optimo,
-    width = 35,
-    height = 15,
-    dpi = 300
-  )
-  
-  
-  # 6. DISEASE PREVALENCE BY LATENT CLASS
-  
-  # 6.1 Extract the selected optimal model
-  obj <- modelo_optimo
-  
-  # 6.2 Determine the number of latent classes
-  nclass <- nrow(obj$probs[[1]])
-  
-  # 6.3 Calculate overall disease prevalence
-  E <- apply(obj$y - 1, 2, mean)
-  
-  # 6.4 Calculate disease prevalence within each latent class
-  n <- list()
-  for (j in 1:nclass) {
-    n[[j]] <- apply(obj$y[obj$predclass == j, ] - 1, 2, mean)
+  if (length(entropy_column) == 0) {
+    stop("Entropy column could not be identified in res$metrics for ",stratum_name)
   }
   
-  # 6.5 Combine prevalence estimates into a single table
-  O <- do.call(cbind, n)
-  rownames(O) <- colnames(obj$y)
-  
-  tabla_prevalencias <- data.frame(
-    Disease = colnames(obj$y),
-    Overall_prevalence = E,
-    O
-  )
-  
-  print(tabla_prevalencias)
-  
-  # 6.6 Export disease prevalence results
-  writexl::write_xlsx(
-    tabla_prevalencias,
-    file.path(stratum_tables,paste0("tabla_prevalencias_",nclass_optimo,"LC_",stratum_name,".xlsx"))
-  )
-  
-  # 7. DESCRIPTIVE CHARACTERIZATION OF THE OPTIMAL CLASSES
-  
-  # 7.1 Prepare the dataset for latent class assignment
-  X_class <- X
-  
-  # 7.2 Harmonize disease names between the input data and the fitted model
-  # Some disease names are automatically modified during data preparation because
-  # certain characters are not handled identically by R and by the MMLCA
-  # preprocessing functions.
-  
-  # These two variables are therefore renamed so that their names exactly match
-  # the disease indicators stored in the fitted LCA model
-  X_class <- X_class %>%
-    rename(
-      dis_Alcohol.related_disorders = `dis_Alcohol-related_disorders`,
-      dis_Other_non.traumatic_joint_disorders = `dis_Other_non-traumatic_joint_disorders`
+  # Identify number-of-classes column
+  nclass_column <- names(metrics)[
+    str_detect(
+      names(metrics),
+      regex("nclass|nclasses|classes|k", ignore_case = TRUE)
     )
+  ]
   
-  # 7.3 Assign each patient to a latent class
-  mm_pattern <- assign_LCA(modelo_optimo, X_class)
+  if (length(nclass_column) == 0) {
+    stop("Number-of-classes column could not be identified in res$metrics for ",stratum_name)
+  }
   
-  # 7.4 Inspect the distribution of latent class assignments
-  table(mm_pattern)
-  prop.table(table(mm_pattern)) * 100
+  # Convert number of classes to numeric
+  nclass_values <- as.numeric(as.character(metrics[[nclass_column[1]]]))
   
-  # 7.5 Add latent class membership to the patient-level dataset
-  X_class$mm_pattern <- mm_pattern
-  X_class$id <- original_ids
+  # Solution with minimum AIC
+  k_AIC <- nclass_values[which.min(metrics[[aic_column[1]]])]
   
-  # 7.6 Convert latent class membership to a factor
-  X_class$mm_pattern <- factor(X_class$mm_pattern, levels = 1:nclass_optimo)
+  # Solution with minimum entropy
+  k_entropy <- nclass_values[which.min(metrics[[entropy_column[1]]])]
   
+  # Solution with one additional class than the minimum-entropy solution
+  k_entropy_plus1 <- k_entropy + 1
   
-  # 8. MERGE LATENT CLASS ASSIGNMENTS WITH PATIENT INFORMATION
+  # Keep only candidate solutions within the fitted range
+  k_to_evaluate <- unique(c(k_AIC, k_entropy, k_entropy_plus1))
   
-  # 8.1 Remove duplicate patient records
-  patient <- patient_raw %>%
-    distinct(patient_id, .keep_all = TRUE)
+  k_to_evaluate <- k_to_evaluate[k_to_evaluate %in% k_candidates]
   
-  # 8.2 Restrict patient information to the LCA study population
-  ids_keep <- diseases_stratum$patient_id
-  patient <- patient %>%
-    filter(patient_id %in% ids_keep)
+  message("Minimum AIC: k = ", k_AIC)
+  message("Minimum entropy: k = ", k_entropy)
+  message("Minimum entropy + 1: k = ", k_entropy_plus1)
+  message("Models selected for evaluation: k = ",paste(k_to_evaluate, collapse = ", "))
   
-  # 8.3 Verify the number of eligible patients
-  length(unique(diseases_stratum$patient_id))
-  length(unique(patient$patient_id))
+  # Initialize container for selected solutions in the current stratum
+  patient_class_results[[stratum_name]] <- list()
   
-  
-  # 9. DERIVE PATIENT-LEVEL MULTIMORBIDITY VARIABLES
-  
-  # 9.1 Standardize the patient identifier
-  X_clasificado <- X_class %>%
-    rename(patient_id = "id")
-  
-  # 9.2 Identify disease variables
-  columnas_enfermedades <- setdiff(
-    names(X_clasificado),
-    c("patient_id", "mm_pattern")
-  )
-  
-  # 9.3 Convert MMLCA disease coding to binary indicators
-  
-  # MMLCA uses its own coding for binary disease indicators. The values are
-  # converted to a conventional 0/1 representation:
-  # 1 -> 0 = absence of disease
-  # 2 -> 1 = presence of disease
-  X_clasificado <- X_clasificado %>%
-    mutate(
-      across(
-        all_of(columnas_enfermedades),
-        ~ ifelse(. == 1, 0, ifelse(. == 2, 1, .))
+  # Evaluate each selected latent class solution
+  for (k_eval in k_to_evaluate) {
+    
+    message("\n")
+    message("Evaluating ", k_eval," latent classes for stratum: ", stratum_name)
+    message("------------------------------------------------------------")
+    
+    # Identify the fitted model corresponding to the selected number of classes
+    model_index <- which(nclass_values == k_eval)
+    
+    if (length(model_index) != 1) {
+      stop("Could not uniquely identify the model with k = ",k_eval," for ", stratum_name)
+    }
+    
+    modelo_evaluado <- res$obj[[model_index]]
+    
+    nclass_evaluado <- k_eval
+    
+    # 5. INTERPRETATION OF THE SELECTED LATENT CLASS SOLUTIONS
+    
+    # 5.1 Method 1: Observed-to-expected enrichment
+    OEx_optimo <- ggOEx(modelo_evaluado , table = FALSE)
+    ggplot2::ggsave(filename = file.path(stratum_figures, paste0("metodo1",nclass_evaluado,"LC_",stratum_name,".jpg")), 
+                    plot = OEx_optimo, 
+                    width = 30, 
+                    height = 20, 
+                    dpi = 300)
+    
+    # 5.2 Method 2: Observed-to-expected disease associations
+    OE_optimo <- ggOE(modelo_evaluado , table = FALSE)
+    ggplot2::ggsave(filename = file.path(stratum_figures, paste0("metodo2",nclass_evaluado,"LC_",stratum_name,".jpg")), 
+                    plot = OE_optimo, 
+                    width = 28, 
+                    height = 22, 
+                    dpi = 300)
+    
+    # 5.3 Method 3: Disease prevalence profiles across latent classes
+    prev_optimo <- ggprev_spaghetti(modelo_evaluado )
+    
+    # 5.4 Customize the prevalence plot
+    prev_optimo <- prev_optimo +
+      ggplot2::theme(
+        axis.text.x = ggplot2::element_text(
+          angle = 45,
+          hjust = 1
+        ),
+        axis.title.x = ggplot2::element_blank(),
+        axis.ticks.length.x = grid::unit(0.1,"cm"),
+        plot.margin = ggplot2::margin(t = 5,r = 5,b = 0,l = 5)
       )
+    
+    # 5.5 Save the prevalence profile figure
+    ggplot2::ggsave(
+      filename = file.path(stratum_figures,paste0("prev_",nclass_evaluado,"LC_",stratum_name,".jpg")),
+      plot = prev_optimo,
+      width = 35,
+      height = 15,
+      dpi = 300
     )
-  
-  # 9.4 Calculate the number of diseases per patient
-  X_clasificado <- X_clasificado %>%
-    mutate(
-      num_enfermedades = rowSums(
-        across(all_of(columnas_enfermedades)),
-        na.rm = TRUE
-      )
-    )
-  
-  # 10. MERGE CLINICAL, DEMOGRAPHIC AND LCA INFORMATION
-  
-  # 10.1 Merge latent class assignments with patient characteristics
-  merged_data <- merge(
-    X_clasificado,
-    patient,
-    by = "patient_id",
-    all.x = TRUE
-  )
-  
-  # 10.2 Retain variables required for descriptive characterization
-  merged_data <- merged_data %>%
-    select(
-      patient_id,
-      sexo,
-      nacionalidad,
-      zbs_tipo,
-      num_enfermedades,
-      mm_pattern,
-      year
+    
+    
+    # 6. DISEASE PREVALENCE BY LATENT CLASS
+    
+    # 6.1 Extract the selected optimal model
+    obj <- modelo_evaluado
+    
+    # 6.2 Determine the number of latent classes
+    nclass <- nrow(obj$probs[[1]])
+    
+    # 6.3 Calculate overall disease prevalence
+    E <- apply(obj$y - 1, 2, mean)
+    
+    # 6.4 Calculate disease prevalence within each latent class
+    n <- list()
+    for (j in 1:nclass) {
+      n[[j]] <- apply(obj$y[obj$predclass == j, ] - 1, 2, mean)
+    }
+    
+    # 6.5 Combine prevalence estimates into a single table
+    O <- do.call(cbind, n)
+    rownames(O) <- colnames(obj$y)
+    
+    tabla_prevalencias <- data.frame(
+      Disease = colnames(obj$y),
+      Overall_prevalence = E * 100,
+      O * 100
     ) %>%
-    distinct()
-  
-  # 10.3 Inspect the resulting dataset
-  summary(merged_data)
-  
-  
-  # 11. DESCRIPTIVE CHARACTERIZATION OF LATENT CLASSES
-  
-  # 11.1 Calculate age at the end of the study period
-  
-  # year represents the patient's year of birth. Because the study period ended
-  # on 31 December 2022, age at the end of follow-up can subsequently be
-  # calculated as 2022 minus the year of birth. Therefore, age is calculated
-  # using 2022 as the reference year: age at end of study = 2022 - year of birth
-  merged_data <- merged_data %>%
-    mutate(
-      edad_2022 = 2022 - year
+      # Format percentages to one decimal place
+      mutate(
+        across(
+          where(is.numeric),
+          ~ round(.x, 1)
+        )
+      )
+    
+    print(tabla_prevalencias)
+    
+    # 6.6 Export disease prevalence results
+    writexl::write_xlsx(
+      tabla_prevalencias,
+      file.path(stratum_tables,paste0("tabla_prevalencias_",nclass_evaluado,"LC_",stratum_name,".xlsx"))
     )
-  
-  # 11.2 Calculate descriptive statistics by latent class
-  tabla_descriptiva <- merged_data %>%
-    group_by(mm_pattern) %>%
-    summarise(
-      n = n(),
-      
-      Porc_Hombres = mean(
-        sexo == "HOMBRE",
-        na.rm = TRUE
-      ) * 100,
-      
-      Porc_Mujeres = mean(
-        sexo == "MUJER",
-        na.rm = TRUE
-      ) * 100,
-      
-      Porc_España = mean(
-        nacionalidad == "ESPAÑA",
-        na.rm = TRUE
-      ) * 100,
-      
-      Porc_Urbano = mean(
-        zbs_tipo == "Urbano",
-        na.rm = TRUE
-      ) * 100,
-      
-      Porc_Rural = mean(
-        zbs_tipo == "Rural",
-        na.rm = TRUE
-      ) * 100,
-      
-      Media_Enfermedades = mean(
+    
+    # 7. DESCRIPTIVE CHARACTERIZATION OF THE SELECTED LATENT CLASSES
+    
+    # 7.1 Prepare the dataset for latent class assignment
+    X_class <- X
+    
+    # 7.2 Harmonize disease names between the input data and the fitted model
+    # Some disease names are automatically modified during data preparation because
+    # certain characters are not handled identically by R and by the MMLCA
+    # preprocessing functions.
+    
+    # 7.3 Assign each patient to a latent class
+    mm_pattern <- assign_LCA(modelo_evaluado , X_class)
+    
+    # 7.4 Inspect the distribution of latent class assignments
+    table(mm_pattern)
+    prop.table(table(mm_pattern)) * 100
+    
+    # 7.5 Add latent class membership to the patient-level dataset
+    X_class$mm_pattern <- mm_pattern
+    X_class$id <- original_ids
+    
+    # 7.6 Convert latent class membership to a factor
+    X_class$mm_pattern <- factor(X_class$mm_pattern, levels = 1:nclass_evaluado)
+    
+    
+    # 8. MERGE LATENT CLASS ASSIGNMENTS WITH PATIENT INFORMATION
+    
+    # 8.1 Remove duplicate patient records
+    patient <- patient_raw %>%
+      distinct(patient_id, .keep_all = TRUE)
+    
+    # 8.2 Restrict patient information to the LCA study population
+    ids_keep <- diseases_stratum$patient_id
+    patient <- patient %>%
+      filter(patient_id %in% ids_keep)
+    
+    # 8.3 Verify the number of eligible patients
+    length(unique(diseases_stratum$patient_id))
+    length(unique(patient$patient_id))
+    
+    
+    # 9. DERIVE PATIENT-LEVEL MULTIMORBIDITY VARIABLES
+    
+    # 9.1 Standardize the patient identifier
+    X_clasificado <- X_class %>%
+      rename(patient_id = "id")
+    
+    # 9.2 Identify disease variables
+    columnas_enfermedades <- setdiff(
+      names(X_clasificado),
+      c("patient_id", "mm_pattern")
+    )
+    
+    # 9.3 Convert MMLCA disease coding to binary indicators
+    
+    # MMLCA uses its own coding for binary disease indicators. The values are
+    # converted to a conventional 0/1 representation:
+    # 1 -> 0 = absence of disease
+    # 2 -> 1 = presence of disease
+    X_clasificado <- X_clasificado %>%
+      mutate(
+        across(
+          all_of(columnas_enfermedades),
+          ~ ifelse(. == 1, 0, ifelse(. == 2, 1, .))
+        )
+      )
+    
+    # 9.4 Calculate the number of diseases per patient
+    X_clasificado <- X_clasificado %>%
+      mutate(
+        num_enfermedades = rowSums(
+          across(all_of(columnas_enfermedades)),
+          na.rm = TRUE
+        )
+      )
+    
+    # 10. MERGE CLINICAL, DEMOGRAPHIC AND LCA INFORMATION
+    
+    # 10.1 Merge latent class assignments with patient characteristics
+    merged_data <- merge(
+      X_clasificado,
+      patient,
+      by = "patient_id",
+      all.x = TRUE
+    )
+    
+    # 10.2 Retain variables required for descriptive characterization
+    merged_data <- merged_data %>%
+      select(
+        patient_id,
+        sexo,
+        nacionalidad,
+        zbs_tipo,
         num_enfermedades,
-        na.rm = TRUE
-      ),
-      
-      Media_Edad_2022 = mean(
-        edad_2022,
-        na.rm = TRUE
-      ),
-      
-      .groups = "drop"
-    ) %>%
-    mutate(
-      across(
-        where(is.numeric),
-        ~ round(.x, 2)
+        mm_pattern,
+        year
+      ) %>%
+      distinct()
+    
+    # 10.3 Inspect the resulting dataset
+    summary(merged_data)
+    
+    
+    # 11. DESCRIPTIVE CHARACTERIZATION OF LATENT CLASSES
+    
+    # 11.1 Calculate age at the end of the study period
+    
+    # year represents the patient's year of birth. Because the study period ended
+    # on 31 December 2022, age at the end of follow-up can subsequently be
+    # calculated as 2022 minus the year of birth. Therefore, age is calculated
+    # using 2022 as the reference year: age at end of study = 2022 - year of birth
+    merged_data <- merged_data %>%
+      mutate(
+        edad_2022 = 2022 - year
       )
-    ) %>%
-    as.data.frame()
-  
-  # 11.3 Display the descriptive table
-  print(tabla_descriptiva)
-  
-  # 11.4 Export the descriptive table
-  write_xlsx(
-    tabla_descriptiva,
-    file.path(stratum_tables, paste0("descriptivo_",nclass_optimo,"LC_",stratum_name,".xlsx"))
-  )
-  
-  # 11.5 Save patient-level class assignments
-  patient_class_results[[stratum_name]] <- merged_data
-  
-  write_csv(
-    merged_data,
-    file.path(stratum_patient_data,paste0("patient_classes_",stratum_name,".csv"))
-  )
-  
-  # 11.6 Save complete results for current stratum
-  saveRDS(
-    list(
-      stratum = stratum_name,
-      sexo = sexo_actual,
-      edad = edad_actual,
-      status_hiv = status_actual,
-      n_patients = n_stratum,
-      n_diseases = length(disease_names),
-      disease_names = disease_names,
-      model = modelo_optimo,
-      n_classes = nclass_optimo,
-      metrics = res$metrics,
-      prevalence = tabla_prevalencias,
-      descriptive = tabla_descriptiva,
-      patient_data = merged_data
-    ),
-    file = file.path(stratum_models,
-                     paste0("LCA_",stratum_name,".rds")
+    
+    # 11.2 Calculate descriptive statistics by latent class
+    tabla_descriptiva <- merged_data %>%
+      group_by(mm_pattern) %>%
+      summarise(
+        n = n(),
+        
+        Porc_Hombres = mean(
+          sexo == "HOMBRE",
+          na.rm = TRUE
+        ) * 100,
+        
+        Porc_Mujeres = mean(
+          sexo == "MUJER",
+          na.rm = TRUE
+        ) * 100,
+        
+        Porc_España = mean(
+          nacionalidad == "ESPAÑA",
+          na.rm = TRUE
+        ) * 100,
+        
+        Porc_Urbano = mean(
+          zbs_tipo == "Urbano",
+          na.rm = TRUE
+        ) * 100,
+        
+        Porc_Rural = mean(
+          zbs_tipo == "Rural",
+          na.rm = TRUE
+        ) * 100,
+        
+        Media_Enfermedades = mean(
+          num_enfermedades,
+          na.rm = TRUE
+        ),
+        
+        Media_Edad_2022 = mean(
+          edad_2022,
+          na.rm = TRUE
+        ),
+        
+        .groups = "drop"
+      ) %>%
+      mutate(
+        # Percentages: one decimal
+        across(
+          c(
+            Porc_Hombres,
+            Porc_Mujeres,
+            Porc_España,
+            Porc_Urbano,
+            Porc_Rural
+          ),
+          ~ round(.x, 1)
+        ),
+        # Continuous variables: three decimals
+        across(
+          c(
+            Media_Enfermedades,
+            Media_Edad_2022
+          ),
+          ~ round(.x, 3)
+        ),
+        # Sample size: integer
+        n = as.integer(n)
+      ) %>%
+      as.data.frame()
+    
+    # 11.3 Display the descriptive table
+    print(tabla_descriptiva)
+    
+    # 11.4 Export the descriptive table
+    write_xlsx(
+      tabla_descriptiva,
+      file.path(stratum_tables, paste0("descriptivo_",nclass_evaluado,"LC_",stratum_name,".xlsx"))
     )
-  )
-  
+    
+    # 11.5 Save patient-level class assignments
+    patient_class_results[[stratum_name]][[paste0("k_", k_eval)]] <- merged_data
+    
+    write_csv(
+      merged_data,
+      file.path(stratum_patient_data,paste0("patient_classes_h",k_eval,"_",stratum_name,".csv"))
+    )
+    
+    # 11.6 Save complete results for current stratum
+    saveRDS(
+      list(
+        stratum = stratum_name,
+        k = k_eval,
+        sexo = sexo_actual,
+        edad = edad_actual,
+        status_hiv = status_actual,
+        n_patients = n_stratum,
+        n_diseases = length(disease_names),
+        disease_names = disease_names,
+        model = modelo_evaluado ,
+        n_classes = nclass_evaluado,
+        metrics = res$metrics,
+        prevalence = tabla_prevalencias,
+        descriptive = tabla_descriptiva,
+        patient_data = merged_data
+      ),
+      file = file.path(stratum_models,
+                       paste0("LCA_k",k_eval, "_",stratum_name,".rds")
+      )
+    )
+    
+  }
 }
-
 # 12. SAVE GLOBAL STRATIFIED RESULTS
 
 saveRDS(
@@ -722,29 +782,26 @@ model_selection_table <- bind_rows(
   lapply(
     names(model_selection_results),
     function(x) {
-      
       df <- as.data.frame(model_selection_results[[x]])
-      
       df$stratum <- x
-      
       df
     }
   )
 )
 
+model_selection_table <- model_selection_table %>%
+  mutate(
+    across(
+      any_of(c("nclass", "nclasses", "classes", "k")),
+      ~ as.integer(.x)
+    ),
+    across(
+      any_of(c("AIC", "BIC", "entropy")),
+      ~ round(.x, 3)
+    )
+  )
+
 write_xlsx(
   model_selection_table,
   file.path(PATH_LCA_STRATIFIED_TABLES,"model_selection_all_strata.xlsx")
-)
-
-# 14. COMBINE PATIENT-LEVEL CLASS ASSIGNMENTS
-
-patient_classes_all <- bind_rows(
-  patient_class_results,
-  .id = "stratum"
-)
-
-write_csv(
-  patient_classes_all,
-  file.path(PATH_LCA_STRATIFIED_PATIENT_DATA, "patient_classes_all_strata.csv")
 )
