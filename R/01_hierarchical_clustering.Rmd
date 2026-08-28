@@ -90,8 +90,8 @@ small correlation values while preserving their direction. The original
 correlation values are retained and displayed in the interactive tooltips.
 
 ```{r}
-# Pearson correlation matrix for binary data
-corr_matrix <- cor(matrix_disease, method = "pearson", use = "pairwise.complete.obs")
+# Tetrachoric correlation matrix for binary data
+corr_matrix <- psych::tetrachoric(matrix_disease,na.rm = TRUE)$rho
 
 # Cleanse disease names
 clean_names <- gsub("_", " ", colnames(matrix_disease))
@@ -113,36 +113,96 @@ corr_ordered <- corr_matrix[ordered_names, ordered_names]
 # for visualising relationships between different diseases
 diag(corr_ordered) <- NA
 
-# Square root transformation for color so that visually
-# low values take on color and don't remain white,
-# maintaining the positive/negative direction
-corr_visual <- sign(corr_ordered) * sqrt(abs(corr_ordered))
+zmin <- -0.15
+zmax <-  0.15
 
-# Generate the interactive heat map
+breaks <- c(
+  -0.15,
+  -0.125,
+  -0.10,
+  -0.075,
+  -0.05,
+  -0.025,
+   0,
+   0.025,
+   0.05,
+   0.075,
+   0.10,
+   0.125,
+   0.15
+)
+
+colors <- c(
+  "#67000D",
+  "#A50F15",
+  "#CB181D",
+  "#EF3B2C",
+  "#FC8D59",
+  "#FFFFFF",
+  "#FFFFFF",
+  "#9ECAE1",
+  "#6BAED6",
+  "#4292C6",
+  "#2171B5",
+  "#08519C"
+)
+
+# Build a truly DISCRETE Plotly colour scale
+colorscale <- list()
+
+for (i in seq_len(length(colors))) {
+  
+  lower <- breaks[i]
+  upper <- breaks[i + 1]
+  
+  lower_norm <- (lower - zmin) / (zmax - zmin)
+  upper_norm <- (upper - zmin) / (zmax - zmin)
+  
+  # Same colour at both ends of the interval
+  colorscale[[length(colorscale) + 1]] <- 
+    list(lower_norm, colors[i])
+  
+  colorscale[[length(colorscale) + 1]] <- 
+    list(upper_norm, colors[i])
+}
+
+# Interactive heatmap
 plot_ly(
-  x = colnames(corr_visual),
-  y = rownames(corr_visual),
-  z = corr_visual,
+  x = colnames(corr_ordered),
+  y = rownames(corr_ordered),
+  z = corr_ordered,
   type = "heatmap",
-  colorscale = list(c(0, "red"), c(0.5, "white"), c(1, "#08306b")),
+  colorscale = colorscale,
+  zmin = zmin,
+  zmax = zmax,
   hoverongaps = FALSE,
   text = round(corr_ordered, 3),
-  hovertemplate = "Disease 1: %{y}<br>Disease 2: %{x}<br>Correlation: %{text}<extra></extra>"
+  hovertemplate = paste0(
+    "Disease 1: %{y}<br>",
+    "Disease 2: %{x}<br>",
+    "Tetrachoric correlation: %{text}<extra></extra>"
+  ),
+  colorbar = list(
+    title = "Tetrachoric correlation",
+    tickmode = "array",
+    tickvals = breaks,
+    ticktext = sprintf("%.2f", breaks)
+  )
 ) %>%
   layout(
-    title = "Binary Correlation Matrix",
+    title = "Binary Tetrachoric Correlation Matrix",
     xaxis = list(
       title = "",
       tickangle = -45,
       tickfont = list(size = 8),
-      categoryarray = colnames(corr_visual),
+      categoryarray = colnames(corr_ordered),
       categoryorder = "array"
     ),
     yaxis = list(
       title = "",
       tickfont = list(size = 8),
       autorange = "reversed",
-      categoryarray = rownames(corr_visual),
+      categoryarray = rownames(corr_ordered),
       categoryorder = "array"
     ),
     margin = list(l = 150, b = 150)
@@ -212,17 +272,102 @@ hopkins_res <- get_clust_tendency(
 
 h_val <- hopkins_res$hopkins_stat
 
-# VAT plot
-fviz_dist(
-  jaccard_dist, 
-  show_labels = FALSE, 
-  gradient = list(low = "red", mid = "white", high = "#3C58D0")
-) + 
-labs(
-  title = "Visual Clustering Tendency Assessment (Jaccard VAT)",
-  fill = "Jaccard Dist"
-)
+# VAT matrix
 
+# Convert Jaccard distance object to matrix
+vat_matrix <- as.matrix(jaccard_dist)
+
+# Reorder objects using hierarchical clustering
+vat_clust <- hclust(jaccard_dist,method = "ward.D2")
+vat_order <- vat_clust$order
+
+# Reorder rows and columns
+vat_matrix_ordered <- vat_matrix[vat_order,vat_order]
+
+# Object names
+vat_names <- rownames(vat_matrix_ordered)
+
+# Set diagonal to NA so it appears blank in the VAT
+diag(vat_matrix_ordered) <- NA
+
+# VAT plot
+plot_ly(
+  x = vat_names,
+  y = vat_names,
+  z = vat_matrix_ordered,
+  type = "heatmap",
+  colorscale = list(
+  list(0.00, "#D73027"),  # Lowest distance
+  list(0.125, "#D73027"),
+  list(0.125, "#F46D43"),
+  list(0.25, "#F46D43"),
+  list(0.25, "#FDAE61"),
+  list(0.375, "#FDAE61"),
+  list(0.375, "#FEE090"),
+  list(0.50, "#FEE090"),
+  list(0.50, "#FFFFBF"),
+  list(0.625, "#FFFFBF"),
+  list(0.625, "#ABD9E9"),
+  list(0.75, "#ABD9E9"),
+  list(0.75, "#74ADD1"),
+  list(0.875, "#74ADD1"),
+  list(0.875, "#4575B4"),
+  list(1.00, "#313695")   # Highest distance
+),
+  zmin = 0.90,
+  zmax = 0.995,
+  hoverongaps = FALSE,
+  text = round(vat_matrix_ordered, 3),
+  hovertemplate = paste0(
+    "Object 1: %{y}<br>",
+    "Object 2: %{x}<br>",
+    "Jaccard distance: %{text}<extra></extra>"
+  ),
+  colorbar = list(
+    title = "Jaccard distance",
+    tickvals = c(
+      0.90,
+      0.92,
+      0.94,
+      0.96,
+      0.98,
+      0.99,
+      0.995
+    ),
+    ticktext = c(
+      "0.90",
+      "0.92",
+      "0.94",
+      "0.96",
+      "0.98",
+      "0.99",
+      "0.995"
+    )
+  )
+) %>%
+  layout(
+    title = "Visual Clustering Tendency Assessment (Jaccard VAT)",
+    xaxis = list(
+      title = "",
+      tickangle = -45,
+      tickfont = list(size = 8),
+      categoryarray = vat_names,
+      categoryorder = "array"
+    ),
+    yaxis = list(
+      title = "",
+      tickfont = list(size = 8),
+      autorange = "reversed",
+      categoryarray = vat_names,
+      categoryorder = "array"
+    ),
+    margin = list(
+      l = 100,
+      b = 150
+    )
+  )
+
+# Display Hopkins Statistic
 print(h_val)
 ```  
   
@@ -279,28 +424,441 @@ The hierarchical clustering dendrogram is visualised to examine the
 relationships between diseases and the resulting hierarchical structure.
 
 Branches are coloured according to the reference five-cluster solution to
-facilitate visual identification of the corresponding disease groups.  
-  
+facilitate visual identification of the corresponding disease groups. 
+
+
 ```{r}
-# Graph the dendrogram of pathologies
-dend <- as.dendrogram(hc_diseases)
+# Piecewise transformation of the dendrogram heights
+# Compress the lower range and expand the upper range
+transform_y <- function(y) {
+  ifelse(
+    y <= 0.90,
+    (y - 0.87) * 0.25,
+    
+    ifelse(
+      y <= 1.03,
+      0.03 * 0.25 + (y - 0.90) * 1.5,
+      
+      0.03 * 0.25 +
+        (1.03 - 0.90) * 1.5 +
+        (y - 1.03) * 0.20
+    )
+  )
+}
+
+# Transform dendrogram heights
+hc_diseases_trans <- hc_diseases
+hc_diseases_trans$height <- transform_y(hc_diseases$height)
+
+# Convert to dendrogram
+dend5 <- as.dendrogram(hc_diseases_trans)
+
+# Acortar branches
+dend5 <- dendextend::set(
+  dend5,
+  "hang",
+  0.2
+)
 
 # Customize label size
-dend <- dendextend::set(dend,"labels_cex",0.6)
+dend5 <- dendextend::set(
+  dend5,
+  "labels_cex",
+  0.6
+)
+
+# Make branches thicker
+dend5 <- dendextend::set(
+  dend5,
+  "branches_lwd",
+  3
+)
 
 # Color branches according to the reference solution
-dend <- dendextend::color_branches(
-  dend,
+dend5 <- dendextend::color_branches(
+  dend5,
   k = k_reference
 )
 
+# Original values to show on the Y-axis
+y_breaks <- c(
+  0.90, 0.95, 0.98, 1.00
+)
+
+# Increase left margin to prevent disease labels from being cut off
+par(mar = c(12, 10, 4, 2) + 0.1)
+
 # Plot dendrogram
 plot(
-  dend,
+  dend5,
   main = "Comorbidity Pattern Dendrogram (Jaccard + ward.D2)",
-  ylab = "Height (Jaccard Distance)"
+  ylab = "",
+  yaxt = "n"
+)
+
+# Add transformed Y-axis using original heights
+axis(
+  side = 2,
+  at = transform_y(y_breaks),
+  labels = sprintf("%.2f", y_breaks),
+  las = 1
+)
+
+# Y-axis title
+mtext(
+  "Height (Jaccard Distance)",
+  side = 2,
+  line = 3
 )
 ```  
+  
+## 7.1 Visualization for k = 3  
+  
+```{r}
+# Piecewise transformation of the dendrogram heights
+# Compress the lower range and expand the upper range
+transform_y <- function(y) {
+  ifelse(
+    y <= 0.90,
+    (y - 0.87) * 0.25,
+    
+    ifelse(
+      y <= 1.03,
+      0.03 * 0.25 + (y - 0.90) * 1.5,
+      
+      0.03 * 0.25 +
+        (1.03 - 0.90) * 1.5 +
+        (y - 1.03) * 0.20
+    )
+  )
+}
+
+# Transform dendrogram heights
+hc_diseases_trans <- hc_diseases
+hc_diseases_trans$height <- transform_y(hc_diseases$height)
+
+# Convert to dendrogram
+dend3 <- as.dendrogram(hc_diseases_trans)
+
+# Acortar branches
+dend3 <- dendextend::set(
+  dend3,
+  "hang",
+  0.2
+)
+
+# Customize label size
+dend3 <- dendextend::set(
+  dend3,
+  "labels_cex",
+  0.6
+)
+
+# Make branches thicker
+dend3 <- dendextend::set(
+  dend3,
+  "branches_lwd",
+  3
+)
+
+# Color branches according to the reference solution
+dend3 <- dendextend::color_branches(
+  dend3,
+  k = 3
+)
+
+# Original values to show on the Y-axis
+y_breaks <- c(
+  0.90, 0.95, 0.98, 1.00
+)
+
+# Increase left margin to prevent disease labels from being cut off
+par(mar = c(12, 10, 4, 2) + 0.1)
+
+# Plot dendrogram
+plot(
+  dend3,
+  main = "Comorbidity Pattern Dendrogram (Jaccard + ward.D2)",
+  ylab = "",
+  yaxt = "n"
+)
+
+# Add transformed Y-axis using original heights
+axis(
+  side = 2,
+  at = transform_y(y_breaks),
+  labels = sprintf("%.2f", y_breaks),
+  las = 1
+)
+
+# Y-axis title
+mtext(
+  "Height (Jaccard Distance)",
+  side = 2,
+  line = 3
+)
+```   
+  
+## 7.2 Visualization for k = 4  
+  
+```{r}
+# Piecewise transformation of the dendrogram heights
+# Compress the lower range and expand the upper range
+transform_y <- function(y) {
+  ifelse(
+    y <= 0.90,
+    (y - 0.87) * 0.25,
+    
+    ifelse(
+      y <= 1.03,
+      0.03 * 0.25 + (y - 0.90) * 1.5,
+      
+      0.03 * 0.25 +
+        (1.03 - 0.90) * 1.5 +
+        (y - 1.03) * 0.20
+    )
+  )
+}
+
+# Transform dendrogram heights
+hc_diseases_trans <- hc_diseases
+hc_diseases_trans$height <- transform_y(hc_diseases$height)
+
+# Convert to dendrogram
+dend4 <- as.dendrogram(hc_diseases_trans)
+
+# Acortar branches
+dend4 <- dendextend::set(
+  dend4,
+  "hang",
+  0.2
+)
+
+# Customize label size
+dend4 <- dendextend::set(
+  dend4,
+  "labels_cex",
+  0.6
+)
+
+# Make branches thicker
+dend4 <- dendextend::set(
+  dend4,
+  "branches_lwd",
+  3
+)
+
+# Color branches according to the reference solution
+dend4 <- dendextend::color_branches(
+  dend4,
+  k = 4
+)
+
+# Original values to show on the Y-axis
+y_breaks <- c(
+  0.90, 0.95, 0.98, 1.00
+)
+
+# Increase left margin to prevent disease labels from being cut off
+par(mar = c(12, 10, 4, 2) + 0.1)
+
+# Plot dendrogram
+plot(
+  dend4,
+  main = "Comorbidity Pattern Dendrogram (Jaccard + ward.D2)",
+  ylab = "",
+  yaxt = "n"
+)
+
+# Add transformed Y-axis using original heights
+axis(
+  side = 2,
+  at = transform_y(y_breaks),
+  labels = sprintf("%.2f", y_breaks),
+  las = 1
+)
+
+# Y-axis title
+mtext(
+  "Height (Jaccard Distance)",
+  side = 2,
+  line = 3
+)
+```   
+  
+## 7.3 Visualization for k = 6 
+  
+```{r}
+# Piecewise transformation of the dendrogram heights
+# Compress the lower range and expand the upper range
+transform_y <- function(y) {
+  ifelse(
+    y <= 0.90,
+    (y - 0.87) * 0.25,
+    
+    ifelse(
+      y <= 1.03,
+      0.03 * 0.25 + (y - 0.90) * 1.5,
+      
+      0.03 * 0.25 +
+        (1.03 - 0.90) * 1.5 +
+        (y - 1.03) * 0.20
+    )
+  )
+}
+
+# Transform dendrogram heights
+hc_diseases_trans <- hc_diseases
+hc_diseases_trans$height <- transform_y(hc_diseases$height)
+
+# Convert to dendrogram
+dend6 <- as.dendrogram(hc_diseases_trans)
+
+# Acortar branches
+dend6 <- dendextend::set(
+  dend6,
+  "hang",
+  0.2
+)
+
+# Customize label size
+dend6 <- dendextend::set(
+  dend6,
+  "labels_cex",
+  0.6
+)
+
+# Make branches thicker
+dend6 <- dendextend::set(
+  dend6,
+  "branches_lwd",
+  3
+)
+
+# Color branches according to the reference solution
+dend6 <- dendextend::color_branches(
+  dend6,
+  k = 6
+)
+
+# Original values to show on the Y-axis
+y_breaks <- c(
+  0.90, 0.95, 0.98, 1.00
+)
+
+# Increase left margin to prevent disease labels from being cut off
+par(mar = c(12, 10, 4, 2) + 0.1)
+
+# Plot dendrogram
+plot(
+  dend6,
+  main = "Comorbidity Pattern Dendrogram (Jaccard + ward.D2)",
+  ylab = "",
+  yaxt = "n"
+)
+
+# Add transformed Y-axis using original heights
+axis(
+  side = 2,
+  at = transform_y(y_breaks),
+  labels = sprintf("%.2f", y_breaks),
+  las = 1
+)
+
+# Y-axis title
+mtext(
+  "Height (Jaccard Distance)",
+  side = 2,
+  line = 3
+)
+```   
+  
+## 7.4 Visualization for k = 7  
+  
+```{r}
+# Piecewise transformation of the dendrogram heights
+# Compress the lower range and expand the upper range
+transform_y <- function(y) {
+  ifelse(
+    y <= 0.90,
+    (y - 0.87) * 0.25,
+    
+    ifelse(
+      y <= 1.03,
+      0.03 * 0.25 + (y - 0.90) * 1.5,
+      
+      0.03 * 0.25 +
+        (1.03 - 0.90) * 1.5 +
+        (y - 1.03) * 0.20
+    )
+  )
+}
+
+# Transform dendrogram heights
+hc_diseases_trans <- hc_diseases
+hc_diseases_trans$height <- transform_y(hc_diseases$height)
+
+# Convert to dendrogram
+dend7 <- as.dendrogram(hc_diseases_trans)
+
+# Acortar branches
+dend7 <- dendextend::set(
+  dend7,
+  "hang",
+  0.2
+)
+
+# Customize label size
+dend7 <- dendextend::set(
+  dend7,
+  "labels_cex",
+  0.6
+)
+
+# Make branches thicker
+dend7 <- dendextend::set(
+  dend7,
+  "branches_lwd",
+  3
+)
+
+# Color branches according to the reference solution
+dend7 <- dendextend::color_branches(
+  dend7,
+  k = 7
+)
+
+# Original values to show on the Y-axis
+y_breaks <- c(
+  0.90, 0.95, 0.98, 1.00
+)
+
+# Increase left margin to prevent disease labels from being cut off
+par(mar = c(12, 10, 4, 2) + 0.1)
+
+# Plot dendrogram
+plot(
+  dend7,
+  main = "Comorbidity Pattern Dendrogram (Jaccard + ward.D2)",
+  ylab = "",
+  yaxt = "n"
+)
+
+# Add transformed Y-axis using original heights
+axis(
+  side = 2,
+  at = transform_y(y_breaks),
+  labels = sprintf("%.2f", y_breaks),
+  las = 1
+)
+
+# Y-axis title
+mtext(
+  "Height (Jaccard Distance)",
+  side = 2,
+  line = 3
+)
+```   
   
 # 8. Reference Pattern Extraction and Export  
   
@@ -329,9 +887,30 @@ write_csv(
 )
 
 # Show summary of pathologies by cluster
-df_patrones %>% 
+tabla_patrones <- df_patrones %>% 
   group_by(cluster) %>% 
-  summarise(n_enfermedades = n(), ejemplos = paste(head(enfermedad, 3), collapse = ", "))
+  summarise(
+    n_enfermedades = n(),
+    ejemplos = paste(head(enfermedad, 3), collapse = ", "),
+    .groups = "drop"
+  ) %>% 
+  rename(
+    `Cluster` = cluster,
+    `Nº de enfermedades` = n_enfermedades,
+    `Ejemplos de enfermedades` = ejemplos
+  )
+
+tabla_patrones %>% 
+  knitr::kable(
+    format = "html",
+    align = c("c", "c", "l"),
+    caption = "Resumen de patologías por clúster"
+  ) %>% 
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center"
+  )
 ```  
   
 # 9. Candidate solutions for different numbers of clusters  
@@ -364,9 +943,4 @@ write_csv(
   file.path(PATH_INTERMEDIATE, "jaccard_disease_patterns_multi_k.csv")
 )
 
-# Show a quick summary of the solution for k = 5
-df_multi_patrones %>% 
-  group_by(cluster_k5) %>% 
-  summarise(n_enfermedades = n(), ejemplos = paste(head(enfermedad, 3), collapse = ", "))
 ```
-
