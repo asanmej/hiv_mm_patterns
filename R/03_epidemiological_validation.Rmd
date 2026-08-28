@@ -238,3 +238,4 @@ The results from both complementary analyses are exported odds ratios for binary
 
 ```{r}
 write_csv(or_results, file.path(PATH_RESULTS, "epidemiological_validation_binary_or.csv"))
+``` 
