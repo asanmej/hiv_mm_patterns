@@ -1,3 +1,8 @@
+# Non-shareable folders
+Data/
+Intermediate_data/
+Results/
+
 # History files
 .Rhistory
 .Rapp.history

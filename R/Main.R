@@ -19,7 +19,7 @@
 # -----------------------------------------------------------------------------
 
 # 1. Project and Environment Configuration
-source("R/00_config.R")
+source("00_config.R")
 
 # HIERARCHICAL CLUSTERING
 # 2. Unsupervised clustering of diseases (Hierarchical Clustering)
