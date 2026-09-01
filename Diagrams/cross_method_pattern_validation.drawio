@@ -1,0 +1,25 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.0.9 Chrome/128.0.6613.186 Electron/32.2.5 Safari/537.36" version="26.0.9">
+  <diagram name="Página-1" id="2dnvHVPoMs_PgzvWv-hg">
+    <mxGraphModel dx="530" dy="606" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="aSWluMtiK-TUiU-jvFww-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="aSWluMtiK-TUiU-jvFww-1" target="aSWluMtiK-TUiU-jvFww-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="aSWluMtiK-TUiU-jvFww-1" value="&lt;b&gt;Factorial Analysis Patterns&lt;/b&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=light-dark(#FFFFCC,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="50" y="280" width="210" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="aSWluMtiK-TUiU-jvFww-2" value="&lt;b&gt;Hierarchical Clustering (Jaccard +&amp;nbsp; Ward.D2)&lt;/b&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=light-dark(#FFCCE6,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="440" y="280" width="210" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="aSWluMtiK-TUiU-jvFww-4" value="&lt;b&gt;Cross-Method&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="310" y="280" width="90" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aSWluMtiK-TUiU-jvFww-5" value="&lt;b&gt;Validation&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="310" y="303" width="90" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

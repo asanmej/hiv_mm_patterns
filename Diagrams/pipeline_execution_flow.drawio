@@ -1,0 +1,46 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.0.9 Chrome/128.0.6613.186 Electron/32.2.5 Safari/537.36" version="26.0.9">
+  <diagram name="Página-1" id="Qw5Jrt8ZzDYVE8uU_i7j">
+    <mxGraphModel dx="521" dy="613" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#E6E6E6,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="70" y="72" width="370" height="410" as="geometry" />
+        </mxCell>
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="LQl2gvmiIhw0RuG0I5wx-3" target="LQl2gvmiIhw0RuG0I5wx-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-3" value="&lt;b&gt;Main.R&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFF3E0,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="205" y="100" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="LQl2gvmiIhw0RuG0I5wx-4" target="LQl2gvmiIhw0RuG0I5wx-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-4" value="&lt;b&gt;00_config.R&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFE6CC,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="195" y="160" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="LQl2gvmiIhw0RuG0I5wx-5" target="LQl2gvmiIhw0RuG0I5wx-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-5" value="&lt;b&gt;01_hierarchical_clustering.Rmd&lt;/b&gt;&lt;div&gt;(Jaccard &amp;amp; Ward.D2)&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#FFCCE6,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="156.25" y="220" width="197.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="LQl2gvmiIhw0RuG0I5wx-6" target="LQl2gvmiIhw0RuG0I5wx-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-6" value="&lt;b&gt;02_patient_pattern_scoring.Rmd&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#E6D0DE,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="156.25" y="290" width="197.5" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="LQl2gvmiIhw0RuG0I5wx-7" target="LQl2gvmiIhw0RuG0I5wx-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-7" value="&lt;b&gt;03_epidemiological_validation.Rmd&lt;/b&gt;&lt;div&gt;(Conditional Logistic Regression)&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#D4E1F5,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="143.13" y="350" width="223.75" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="LQl2gvmiIhw0RuG0I5wx-8" value="&lt;b&gt;04_visualization.R&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#CCFFCC,var(--ge-dark-color, #121212));" vertex="1" parent="1">
+          <mxGeometry x="178.13" y="420" width="153.75" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
