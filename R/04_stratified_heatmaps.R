@@ -277,6 +277,10 @@ pwalk(estratos, function(sexo_val, edad_val, status_val, k_val) {
         na.rm = TRUE
       ),
       .groups = "drop"
+    ) %>%
+    # Remove diseases that are completely absent from the current stratum
+    filter(
+      expected_prev > 0
     )
   
   # Calculate observed disease prevalence within each patient cluster:
@@ -345,7 +349,7 @@ pwalk(estratos, function(sexo_val, edad_val, status_val, k_val) {
   heatmap_matrix <- heatmap_matrix %>%
     complete(
       enfermedad = unique(
-        patrones_subset$enfermedad
+        global_prev$enfermedad
       ),
       cluster = clusters_expected
     )
