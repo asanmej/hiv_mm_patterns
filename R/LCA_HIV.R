@@ -360,9 +360,9 @@ for (i in seq_len(nrow(strata))){
   
   # Three solutions are selected for further evaluation within each stratum:
   # 1) the solution with the minimum AIC,
-  # 2) the solution with the minimum entropy,
+  # 2) the solution with the maximum entropy,
   # 3) the solution with one additional latent class compared with the
-  #    minimum-entropy solution.
+  #    maximum-entropy solution.
   #
   # If two or more criteria identify the same number of classes, the duplicate
   # solution is evaluated only once.
@@ -412,7 +412,7 @@ for (i in seq_len(nrow(strata))){
   k_AIC <- nclass_values[which.min(metrics[[aic_column[1]]])]
   
   # Solution with minimum entropy
-  k_entropy <- nclass_values[which.min(metrics[[entropy_column[1]]])]
+  k_entropy <- nclass_values[which.max(metrics[[entropy_column[1]]])]
   
   # Solution with one additional class than the minimum-entropy solution
   k_entropy_plus1 <- k_entropy + 1
@@ -423,8 +423,8 @@ for (i in seq_len(nrow(strata))){
   k_to_evaluate <- k_to_evaluate[k_to_evaluate %in% k_candidates]
   
   message("Minimum AIC: k = ", k_AIC)
-  message("Minimum entropy: k = ", k_entropy)
-  message("Minimum entropy + 1: k = ", k_entropy_plus1)
+  message("Maximum entropy: k = ", k_entropy)
+  message("Maximum entropy + 1: k = ", k_entropy_plus1)
   message("Models selected for evaluation: k = ",paste(k_to_evaluate, collapse = ", "))
   
   # Initialize container for selected solutions in the current stratum
