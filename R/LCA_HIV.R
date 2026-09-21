@@ -726,7 +726,17 @@ for (i in seq_len(nrow(strata))){
       file.path(stratum_tables, paste0("descriptivo_",nclass_evaluado,"LC_",stratum_name,".xlsx"))
     )
     
-    # 11.5 Save patient-level class assignments
+    # 11.5 Save merged data for heatmap
+    merged_data <- merged_data %>%
+      mutate(
+        sexo_val   = sexo_actual,
+        edad_val   = edad_actual,
+        status_val = status_actual,
+        k          = k_eval,
+        cluster    = as.character(mm_pattern)
+      )
+    
+    # 11.6 Save patient-level class assignments
     patient_class_results[[stratum_name]][[paste0("k_", k_eval)]] <- merged_data
     
     write_csv(
@@ -734,7 +744,7 @@ for (i in seq_len(nrow(strata))){
       file.path(stratum_patient_data,paste0("patient_classes_h",k_eval,"_",stratum_name,".csv"))
     )
     
-    # 11.6 Save complete results for current stratum
+    # 11.7 Save complete results for current stratum
     saveRDS(
       list(
         stratum = stratum_name,
@@ -776,7 +786,21 @@ saveRDS(
   file = file.path(PATH_LCA_STRATIFIED_PATIENT_DATA, "all_patient_class_results.rds")
 )
 
-# 13. COMBINE MODEL SELECTION RESULTS
+# 13. PREPARE DATA FOR HEATMAP
+
+patient_pattern_scores_LCA <- bind_rows(
+  lapply(names(patient_class_results), function(strat) {
+    bind_rows(patient_class_results[[strat]])
+  })
+) %>%
+  select(patient_id, sexo_val, edad_val, status_val, k, cluster)
+
+write_csv(
+  patient_pattern_scores_LCA,
+  file.path(PATH_INTERMEDIATE_LCA, "patient_pattern_scores_LCA.csv")
+)
+
+# 14. COMBINE MODEL SELECTION RESULTS
 
 model_selection_table <- bind_rows(
   lapply(
