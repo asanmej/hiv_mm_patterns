@@ -360,9 +360,9 @@ for (i in seq_len(nrow(strata))){
   
   # Three solutions are selected for further evaluation within each stratum:
   # 1) the solution with the minimum AIC,
-  # 2) the solution with the minimum entropy,
+  # 2) the solution with the maximum entropy,
   # 3) the solution with one additional latent class compared with the
-  #    minimum-entropy solution.
+  #    maximum-entropy solution.
   #
   # If two or more criteria identify the same number of classes, the duplicate
   # solution is evaluated only once.
@@ -412,7 +412,7 @@ for (i in seq_len(nrow(strata))){
   k_AIC <- nclass_values[which.min(metrics[[aic_column[1]]])]
   
   # Solution with minimum entropy
-  k_entropy <- nclass_values[which.min(metrics[[entropy_column[1]]])]
+  k_entropy <- nclass_values[which.max(metrics[[entropy_column[1]]])]
   
   # Solution with one additional class than the minimum-entropy solution
   k_entropy_plus1 <- k_entropy + 1
@@ -423,8 +423,8 @@ for (i in seq_len(nrow(strata))){
   k_to_evaluate <- k_to_evaluate[k_to_evaluate %in% k_candidates]
   
   message("Minimum AIC: k = ", k_AIC)
-  message("Minimum entropy: k = ", k_entropy)
-  message("Minimum entropy + 1: k = ", k_entropy_plus1)
+  message("Maximum entropy: k = ", k_entropy)
+  message("Maximum entropy + 1: k = ", k_entropy_plus1)
   message("Models selected for evaluation: k = ",paste(k_to_evaluate, collapse = ", "))
   
   # Initialize container for selected solutions in the current stratum
@@ -726,7 +726,17 @@ for (i in seq_len(nrow(strata))){
       file.path(stratum_tables, paste0("descriptivo_",nclass_evaluado,"LC_",stratum_name,".xlsx"))
     )
     
-    # 11.5 Save patient-level class assignments
+    # 11.5 Save merged data for heatmap
+    merged_data <- merged_data %>%
+      mutate(
+        sexo_val   = sexo_actual,
+        edad_val   = edad_actual,
+        status_val = status_actual,
+        k          = k_eval,
+        cluster    = as.character(mm_pattern)
+      )
+    
+    # 11.6 Save patient-level class assignments
     patient_class_results[[stratum_name]][[paste0("k_", k_eval)]] <- merged_data
     
     write_csv(
@@ -734,7 +744,7 @@ for (i in seq_len(nrow(strata))){
       file.path(stratum_patient_data,paste0("patient_classes_h",k_eval,"_",stratum_name,".csv"))
     )
     
-    # 11.6 Save complete results for current stratum
+    # 11.7 Save complete results for current stratum
     saveRDS(
       list(
         stratum = stratum_name,
@@ -776,7 +786,21 @@ saveRDS(
   file = file.path(PATH_LCA_STRATIFIED_PATIENT_DATA, "all_patient_class_results.rds")
 )
 
-# 13. COMBINE MODEL SELECTION RESULTS
+# 13. PREPARE DATA FOR HEATMAP
+
+patient_pattern_scores_LCA <- bind_rows(
+  lapply(names(patient_class_results), function(strat) {
+    bind_rows(patient_class_results[[strat]])
+  })
+) %>%
+  select(patient_id, sexo_val, edad_val, status_val, k, cluster)
+
+write_csv(
+  patient_pattern_scores_LCA,
+  file.path(PATH_INTERMEDIATE_LCA, "patient_pattern_scores_LCA.csv")
+)
+
+# 14. COMBINE MODEL SELECTION RESULTS
 
 model_selection_table <- bind_rows(
   lapply(
