@@ -49,7 +49,7 @@ diag_data <- read_csv(PATH_DIAG_BOOL_PREVALENT_FINAL)
 # 2. Load disease-cluster assignments for all candidate k values
 disease_patterns_multi <- read_csv(
   file.path(
-    PATH_INTERMEDIATE,
+    PATH_HIERARCHICAL_FULL_TABLES,
     "jaccard_disease_patterns_multi_k.csv"
   )
 ) 
@@ -278,6 +278,6 @@ patient_pattern_scores_long %>%
 Save the finalized dataset containing scores, proportions, and assigned clusters.
 
 ```{r export}
-write_csv(patient_pattern_scores_long, file.path(PATH_INTERMEDIATE, "patient_pattern_scores_hierarchical_k3_k7.csv"))
+write_csv(patient_pattern_scores_long, file.path(PATH_HIERARCHICAL_FULL_PATIENT_DATA, "patient_pattern_scores_hierarchical_k3_k7.csv"))
 ```
 

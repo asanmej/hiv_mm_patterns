@@ -1,36 +1,12 @@
-# 0. PACKAGE MANAGEMENT
-
-## 0.1 CRAN packages
-pkg <- c(
-  ## Efficient data manipulation
-  "data.table",
-  ## Writing Excel output files
-  "writexl",
-  ## Package development and GitHub installation
-  "devtools"
-)
-
-# 0.2 Install and load CRAN packages
-lapply(pkg, function(x) {
-  if (!require(x, character.only = TRUE)) {
-    install.packages(x, character.only = TRUE)
-    library(x, character.only = TRUE)
+# 0. PACKAGES
+# data.table and writexl come from 00_config.R. MMLCA and ggsankey (GitHub) are
+# installed once with R/00_install_packages.R; nothing is installed from here.
+for (p in c("MMLCA", "ggsankey")) {
+  if (!requireNamespace(p, quietly = TRUE)) {
+    stop("Package '", p, "' is not installed. Run R/00_install_packages.R once, ",
+         "in a fresh R session.", call. = FALSE)
   }
-})
-
-# 0.3 GitHub packages
-# MMLCA is required for the latent class analysis performed in this study.
-# It is installed from GitHub because the version used in this analysis is
-# distributed through the corresponding GitHub repository.
-
-if (!requireNamespace("MMLCA", quietly = TRUE)) {
-  devtools::install_github("ARCbiostat/MMLCA")
 }
-
-if (!requireNamespace("ggsankey", quietly = TRUE)) {
-  devtools::install_github("davidsjoberg/ggsankey")
-}
-
 library(ggsankey)
 library(MMLCA)
 
@@ -53,8 +29,8 @@ cohort_stratified <- patient_raw %>%
     
     # Standardize sex
     sexo_clean = case_when(
-      str_detect(tolower(sexo), "h") ~ "MEN",
-      str_detect(tolower(sexo), "m") ~ "WOMEN",
+      str_detect(tolower(sexo), "h") ~ "MALE",
+      str_detect(tolower(sexo), "m") ~ "FEMALE",
       TRUE ~ as.character(sexo)
     ),
     
@@ -74,7 +50,7 @@ cohort_stratified <- patient_raw %>%
 k_candidates <- 3:7
 
 strata <- expand.grid(
-  sexo_val   = c("MEN", "WOMEN"),
+  sexo_val   = c("MALE", "FEMALE"),
   edad_val   = c("under_45", "45to65", "over_65"),
   status_val = c("ctl", "hiv"),
   stringsAsFactors = FALSE
@@ -100,12 +76,12 @@ if(!all(str_detect(enfermedades_cols, "^dis_"))) {
 # 1.6 Save the intermediate diagnosis dataset
 write_csv(
   diagnoses_wide,
-  file.path(PATH_INTERMEDIATE_LCA, "diagnoses_wide.csv")
+  file.path(PATH_LCA_PATIENT_DATA, "diagnoses_wide.csv")
 )
 
 saveRDS(
   diagnoses_wide,
-  file.path(PATH_INTERMEDIATE_LCA, "diagnoses_wide.rds")
+  file.path(PATH_LCA_PATIENT_DATA, "diagnoses_wide.rds")
 )
 
 # 1.7 Restrict the analysis to patients with at least two diseases 
@@ -117,12 +93,12 @@ diseases_bl <- diseases_bl %>%
 # 1.8 Save the analysis-ready disease dataset
 write_csv(
   diseases_bl,
-  file.path(PATH_INTERMEDIATE_LCA, "diseases_bl.csv")
+  file.path(PATH_LCA_PATIENT_DATA, "diseases_bl.csv")
 )
 
 saveRDS(
   diseases_bl,
-  file.path(PATH_INTERMEDIATE_LCA, "diseases_bl.rds")
+  file.path(PATH_LCA_PATIENT_DATA, "diseases_bl.rds")
 )
 
 # 1.9 A reproducible random seed is set
@@ -198,28 +174,28 @@ for (i in seq_len(nrow(strata))){
   
   # 2.4.1 Define output directories for current stratum
   stratum_figures <- file.path(
-    PATH_LCA_STRATIFIED_FIGURES,
+    PATH_LCA_FIGURES,
     sexo_actual,
     edad_actual,
     status_actual
   )
   
   stratum_tables <- file.path(
-    PATH_LCA_STRATIFIED_TABLES,
+    PATH_LCA_TABLES,
     sexo_actual,
     edad_actual,
     status_actual
   )
   
   stratum_models <- file.path(
-    PATH_LCA_STRATIFIED_MODELS,
+    PATH_LCA_MODELS,
     sexo_actual,
     edad_actual,
     status_actual
   )
   
   stratum_patient_data <- file.path(
-    PATH_LCA_STRATIFIED_PATIENT_DATA,
+    PATH_LCA_PATIENT_DATA,
     sexo_actual,
     edad_actual,
     status_actual
@@ -773,17 +749,17 @@ for (i in seq_len(nrow(strata))){
 
 saveRDS(
   lca_results,
-  file = file.path(PATH_LCA_STRATIFIED_MODELS,"all_LCA_results.rds")
+  file = file.path(PATH_LCA_MODELS,"all_LCA_results.rds")
 )
 
 saveRDS(
   model_selection_results,
-  file = file.path(PATH_LCA_STRATIFIED_MODELS,"all_model_selection_results.rds")
+  file = file.path(PATH_LCA_MODELS,"all_model_selection_results.rds")
 )
 
 saveRDS(
   patient_class_results,
-  file = file.path(PATH_LCA_STRATIFIED_PATIENT_DATA, "all_patient_class_results.rds")
+  file = file.path(PATH_LCA_PATIENT_DATA, "all_patient_class_results.rds")
 )
 
 # 13. PREPARE DATA FOR HEATMAP
@@ -797,7 +773,7 @@ patient_pattern_scores_LCA <- bind_rows(
 
 write_csv(
   patient_pattern_scores_LCA,
-  file.path(PATH_INTERMEDIATE_LCA, "patient_pattern_scores_LCA.csv")
+  file.path(PATH_LCA_PATIENT_DATA, "patient_pattern_scores_LCA.csv")
 )
 
 # 14. COMBINE MODEL SELECTION RESULTS
@@ -813,44 +789,34 @@ model_selection_table <- bind_rows(
   )
 )
 
+# The columns returned by MMLCA::select_number_LCA() depend on the installed
+# version of MMLCA (e.g. CAIC is not always present), so only the columns that
+# exist are formatted instead of assuming a fixed list.
+message("Columns returned by MMLCA: ",
+        paste(setdiff(names(model_selection_table), "stratum"), collapse = ", "))
+
+# Columns holding a proportion (0-1) that is reported as a percentage
+entropy_col  <- grep("entropy",  names(model_selection_table), ignore.case = TRUE, value = TRUE)
+accuracy_col <- grep("accuracy", names(model_selection_table), ignore.case = TRUE, value = TRUE)
+
+to_percent <- function(x) if (all(x <= 1, na.rm = TRUE)) round(x * 100, 1) else round(x, 1)
+
 model_selection_table <- model_selection_table %>%
   mutate(
-    # Convert numeric columns from character to numeric
-    across(
-      c(
-        nclass,
-        log_likelihood,
-        df,
-        BIC,
-        AIC,
-        CAIC,
-        ABIC,
-        likelihood_ratio,
-        `Assignment accuracy (%)`,
-        Entropy
-      ),
-      as.numeric
-    ),
+    # Convert every metric to numeric (everything except the stratum label)
+    across(-all_of("stratum"), ~ suppressWarnings(as.numeric(as.character(.x)))),
     
-    # Format numerical values
+    # Round information criteria and likelihoods (only the ones that exist)
     across(
-      c(
-        log_likelihood,
-        BIC,
-        AIC,
-        CAIC,
-        ABIC,
-        likelihood_ratio
-      ),
-      ~round(.x, 3)
+      any_of(c("log_likelihood", "BIC", "AIC", "CAIC", "ABIC", "likelihood_ratio")),
+      ~ round(.x, 3)
     ),
     
     # Convert proportions to percentages
-    `Assignment accuracy (%)` = round(`Assignment accuracy (%)` * 100, 1),
-    Entropy = round(Entropy * 100, 1)
+    across(all_of(c(accuracy_col, entropy_col)), to_percent)
   )
 
 write_xlsx(
   model_selection_table,
-  file.path(PATH_LCA_STRATIFIED_TABLES,"model_selection_all_strata.xlsx")
+  file.path(PATH_LCA_TABLES,"model_selection_all_strata.xlsx")
 )

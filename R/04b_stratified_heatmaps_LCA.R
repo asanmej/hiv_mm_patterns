@@ -48,12 +48,14 @@ library(purrr)
 library(plotly)
 library(htmlwidgets)
 
+source(file.path(PATH_R, "06_heatmap_common.R"))  # shared heatmap functions, colours, statistics
+
 
 #### 1. Load the LCA patient assignments and the binary disease matrix
 
 # Patient-level latent class assignments for every stratum and evaluated k
 pattern_data <- read_csv(
-  file.path(PATH_INTERMEDIATE_LCA, "patient_pattern_scores_LCA.csv"),
+  file.path(PATH_LCA_PATIENT_DATA, "patient_pattern_scores_LCA.csv"),
   show_col_types = FALSE
 )
 
@@ -118,7 +120,7 @@ for (i in seq_len(nrow(strata_unique))) {
   stratum_i <- paste(sexo_i, edad_i, status_i, sep = "_")
   
   rdata_path <- file.path(
-    PATH_LCA_STRATIFIED_MODELS,
+    PATH_LCA_MODELS,
     sexo_i,
     edad_i,
     status_i,
@@ -155,54 +157,7 @@ strata_grid <- pattern_data %>%
   )
 
 
-#### 5. Fixed discrete color scale for the Observed/Expected ratio
-
-# Identical to 04_stratified_heatmaps.R so that both sets of heatmaps are
-# directly comparable.
-color_0_05  <- "#FFFFFF"
-color_05_09 <- "#E8EEF8"
-color_09_11 <- "#C7CCD4"
-color_11_2  <- "#E89BB7"
-color_2_3   <- "#F2D35E"
-color_3_4   <- "#78B87A"
-color_4_5   <- "#E99A4A"
-color_gt5   <- "#B83A4A"
-
-Observed_Expected_colorscale <- list(
-  
-  # 0-0.5
-  c(0.00 / 5.5, color_0_05),
-  c(0.50 / 5.5, color_0_05),
-  
-  # 0.5-0.9
-  c(0.50 / 5.5, color_05_09),
-  c(0.90 / 5.5, color_05_09),
-  
-  # 0.9-1.1
-  c(0.90 / 5.5, color_09_11),
-  c(1.10 / 5.5, color_09_11),
-  
-  # 1.1-2
-  c(1.10 / 5.5, color_11_2),
-  c(2.00 / 5.5, color_11_2),
-  
-  # 2-3
-  c(2.00 / 5.5, color_2_3),
-  c(3.00 / 5.5, color_2_3),
-  
-  # 3-4
-  c(3.00 / 5.5, color_3_4),
-  c(4.00 / 5.5, color_3_4),
-  
-  # 4-5
-  c(4.00 / 5.5, color_4_5),
-  c(5.00 / 5.5, color_4_5),
-  
-  # >5
-  c(5.00 / 5.5, color_gt5),
-  c(5.50 / 5.5, color_gt5)
-)
-
+#### 5. Colour scale, statistics and plotting: see 06_heatmap_common.R
 
 # 6. Generate one heatmap for each stratum and evaluated k
 
@@ -271,258 +226,21 @@ pwalk(strata_grid, function(stratum_sex, stratum_age, stratum_status, k_val) {
     return(NULL)
   }
   
-  # 6.4 Long format: one row per patient-disease combination 
-  diag_long <- cohort_stratum %>%
-    pivot_longer(
-      cols = all_of(disease_map$enfermedad_col),
-      names_to = "enfermedad_col",
-      values_to = "has_disease"
-    ) %>%
-    mutate(
-      # 1 = disease present, 0 = disease absent
-      has_disease = if_else(is.na(has_disease) | has_disease == 0, 0, 1)
-    ) %>%
-    # Readable disease label
-    left_join(
-      disease_map %>% select(enfermedad_col, enfermedad),
-      by = "enfermedad_col"
-    )
-  
-  # 6.5 Expected prevalence: whole stratum, regardless of class
-  global_prev <- diag_long %>%
-    group_by(enfermedad) %>%
-    summarise(
-      expected_prev = mean(has_disease, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    # Remove diseases that are completely absent from the stratum
-    filter(expected_prev > 0)
-  
-  # 6.6 Observed prevalence: within each latent class 
-  cluster_prev <- diag_long %>%
-    group_by(enfermedad, cluster) %>%
-    summarise(
-      observed_prev = mean(has_disease, na.rm = TRUE),
-      n_patients = n(),
-      n_cases = sum(has_disease, na.rm = TRUE),
-      .groups = "drop"
-    )
-  
-  # 6.7 Observed/Expected ratio 
-  # O/E = P(Disease | Latent class) / P(Disease | Stratum)
-  heatmap_matrix <- cluster_prev %>%
-    inner_join(global_prev, by = "enfermedad") %>%
-    mutate(
-      Observed_Expected_ratio = case_when(
-        expected_prev > 0 ~ observed_prev / expected_prev,
-        TRUE ~ NA_real_
-      )
-    ) %>%
-    select(
-      enfermedad,
-      cluster,
-      value = Observed_Expected_ratio,
-      observed_prev,
-      expected_prev,
-      n_patients,
-      n_cases
-    )
-  
-  # Complete the disease x latent-class grid. A latent class of the model with
-  # no assigned patients would otherwise disappear from the heatmap.
-  #   NA = no valid Observed/Expected estimate is available
-  #   0  = the disease has an observed prevalence of zero in the class
-  clusters_expected <- as.character(seq_len(k_val))
-  
-  heatmap_matrix <- heatmap_matrix %>%
-    complete(
-      enfermedad = unique(global_prev$enfermedad),
-      cluster = clusters_expected
-    )
-  
-  # Order diseases alphabetically and classes numerically
-  sorted_diseases <- sort(unique(heatmap_matrix$enfermedad))
-  
-  heatmap_matrix <- heatmap_matrix %>%
-    mutate(
-      cluster_num = match(cluster, clusters_expected),
-      disease_num = match(enfermedad, sorted_diseases)
-    )
-  
-  # Size of each latent class (% of the patients of the stratum), shown in the
-  # x-axis labels so they can be compared with the class sizes printed in the
-  # LCA figures
-  cluster_labels <- tibble(cluster = clusters_expected) %>%
-    left_join(
-      cohort_stratum %>%
-        count(cluster) %>%
-        mutate(pct = round(100 * n / sum(n))),
-      by = "cluster"
-    ) %>%
-    mutate(
-      pct = coalesce(pct, 0),
-      label = paste0("Cl. ", cluster, " (", pct, "%)")
-    ) %>%
-    pull(label)
-  
-  # Check that valid ratios are available
-  max_ratio <- suppressWarnings(max(heatmap_matrix$value, na.rm = TRUE))
-  
-  if (!is.finite(max_ratio)) {
-    message("No valid ratios for: ", stratum_name, " | k = ", k_val)
-    return(NULL)
-  }
-  
-  # 6.8 Titles and hover text 
-  file_title <- paste0(
-    "Observed/Expected Ratio (LCA, k=", k_val, ") - ",
-    stratum_sex,
-    " | Age: ", stratum_age,
-    " | Status: ", toupper(stratum_status),
-    " | N = ", nrow(cohort_stratum)
+  # 6.4-6.10 Statistics (O/E, Fisher vs rest + FDR), marks and HTML output are
+  # produced by the shared function, identical for hierarchical / LCA / EFA.
+  hm_files <- oe_heatmap_files(PATH_LCA_HEATMAPS, "LCA",
+                               stratum_sex, stratum_age, stratum_status, k_val)
+  make_oe_heatmap(
+    cohort_stratum = cohort_stratum,
+    disease_map    = disease_map %>%
+      transmute(enfermedad_col, enfermedad, cluster_enfermedad = NA_character_),
+    clusters       = as.character(seq_len(k_val)),
+    title_core     = paste0("Observed/Expected Ratio (LCA, k=", k_val, ") - ",
+                            stratum_sex, " | Age: ", stratum_age,
+                            " | Status: ", toupper(stratum_status)),
+    out_html = hm_files$html,
+    out_csv  = hm_files$csv
   )
-  
-  heatmap_matrix <- heatmap_matrix %>%
-    mutate(
-      ratio_text = if_else(is.na(value), "NA", paste0(round(value, 2)))
-    )
-  
-  # 6.9 Interactive heatmap 
-  p <- plot_ly(
-    data = heatmap_matrix,
-    
-    x = ~cluster_num,
-    y = ~disease_num,
-    
-    # The actual Observed/Expected ratio determines the cell colour
-    z = ~value,
-    
-    # Fixed visual scale from 0 to 5.5: values above 5 are displayed in the
-    # >5 colour category while their exact values remain in the tooltip
-    zmin = 0,
-    zmax = 5.5,
-    
-    type = "heatmap",
-    
-    colorscale = Observed_Expected_colorscale,
-    
-    hoverongaps = FALSE,
-    
-    # Hover text
-    text = ~paste0(
-      "<b>", enfermedad, "</b>",
-      "<br><br>",
-      
-      "<b>Observed/Expected ratio:</b> ",
-      ratio_text,
-      
-      "<br><b>Observed prevalence:</b> ",
-      round(observed_prev, 4),
-      
-      "<br><b>Expected prevalence:</b> ",
-      round(expected_prev, 4),
-      
-      "<br><b>N patients:</b> ",
-      n_patients,
-      
-      "<br><b>Cases:</b> ",
-      n_cases
-    ),
-    
-    hovertemplate =
-      paste0(
-        "%{text}",
-        "<br><br>",
-        "<b>Latent class:</b> Cl. %{x}",
-        "<extra></extra>"
-      ),
-    
-    # Colorbar with fixed tick positions at the interval boundaries
-    colorbar = list(
-      title = list(
-        text = "Observed_Expected ratio",
-        side = "top"
-      ),
-      
-      tickmode = "array",
-      
-      tickvals = c(0, 0.5, 0.9, 1.1, 2, 3, 4, 5, 5.25),
-      
-      ticktext = c("0", "0.5", "0.9", "1.1", "2", "3", "4", "5", ">5"),
-      
-      len = 0.8,
-      thickness = 20,
-      ticklabelposition = "outside",
-      nticks = 9
-    )
-  ) %>%
-    
-    layout(
-      title = list(
-        text = file_title,
-        font = list(size = 11)
-      ),
-      
-      xaxis = list(
-        title = "",
-        tickmode = "array",
-        tickvals = seq_along(clusters_expected),
-        ticktext = cluster_labels,
-        range = c(0.5, length(clusters_expected) + 0.5),
-        fixedrange = TRUE
-      ),
-      
-      yaxis = list(
-        title = "",
-        tickmode = "array",
-        tickvals = seq_along(sorted_diseases),
-        ticktext = sorted_diseases,
-        autorange = "reversed",
-        range = c(length(sorted_diseases) + 0.5, 0.5),
-        tickfont = list(size = 8),
-        fixedrange = TRUE
-      ),
-      
-      margin = list(
-        l = 240,
-        b = 50,
-        r = 100
-      )
-    )
-  
-  # 6.10 Save as a self-contained HTML file 
-  # The heatmap is saved next to the other LCA figures of the same stratum
-  # (metodo1/metodo2/prev_...), following their naming convention.
-  target_dir <- file.path(
-    PATH_LCA_STRATIFIED_FIGURES,
-    stratum_sex,
-    stratum_age,
-    stratum_status
-  )
-  
-  if (!dir.exists(target_dir)) {
-    dir.create(target_dir, recursive = TRUE)
-  }
-  
-  html_filename <- file.path(
-    target_dir,
-    paste0("heatmap", k_val, "LC_", stratum_name, ".html")
-  )
-  
-  saveWidget(
-    p,
-    html_filename,
-    selfcontained = TRUE
-  )
-  
-  # Report generation status
-  message(
-    "Generated: ",
-    stratum_name,
-    " | k = ", k_val,
-    " | N patients = ", nrow(cohort_stratum),
-    " | N diseases = ", length(unique(global_prev$enfermedad)),
-    " | Max O/E ratio = ", round(max_ratio, 2)
-  )
+  invisible(NULL)
 }
 )

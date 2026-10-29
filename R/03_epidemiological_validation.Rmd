@@ -51,9 +51,9 @@ We import:
   
 ```{r}
 # Load datasets
-scores_df    <- read_csv(file.path(PATH_INTERMEDIATE, "patient_pattern_scores_hierarchical_k3_k7.csv"))
-cohort_match <- read_csv(file.path(PATH_DATA, "cohort_match_id.csv"))
-bdu_data     <- read_csv(file.path(PATH_DATA, "bdu_full.csv"))
+scores_df    <- read_csv(file.path(PATH_HIERARCHICAL_FULL_PATIENT_DATA, "patient_pattern_scores_hierarchical_k3_k7.csv"))
+cohort_match <- read_csv(PATH_COHORT_MATCH_ID)
+bdu_data     <- read_csv(PATH_BDU_FULL)
 
 # Extract cases and controls separately and combine them into a
 # single patient-level representation of the matched cohort
@@ -237,5 +237,5 @@ ggplot(or_results, aes(x = OR, y = factor(Pattern), color = factor(k))) +
 The results from both complementary analyses are exported odds ratios for binary pattern presence.
 
 ```{r}
-write_csv(or_results, file.path(PATH_RESULTS, "epidemiological_validation_binary_or.csv"))
+write_csv(or_results, file.path(PATH_HIERARCHICAL_FULL_TABLES, "epidemiological_validation_binary_or.csv"))
 ``` 
