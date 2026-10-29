@@ -152,20 +152,19 @@ compute_patient_pattern_scores <- function(diag_stratum, pat, k_val) {
 
 # Derive the dominant pattern per patient using the same rule as the
 # original scoring script.
-derive_dominant_pattern <- function(scores) {
-  
+derive_dominant_pattern <- function(scores, rule = "count") {
+  # "count": weighted_score (= number of diseases of the pattern the patient has)
+  # "proportion": proportion (= % of the pattern's diseases the patient has)
+  scores$.score <- if (rule == "count") scores$weighted_score else scores$proportion
   scores %>%
     group_by(patient_id) %>%
     mutate(
-      max_score = max(weighted_score, na.rm = TRUE),
-      n_max = sum(
-        weighted_score == max_score & max_score > 0,
-        na.rm = TRUE
-      ),
+      max_score = max(.score, na.rm = TRUE),
+      n_max = sum(abs(.score - max_score) < 1e-12 & max_score > 0, na.rm = TRUE),
       dominant_pattern = case_when(
         max_score == 0 ~ NA_integer_,
         n_max > 1      ~ NA_integer_,
-        TRUE           ~ pattern[which.max(weighted_score)]
+        TRUE           ~ pattern[which.max(.score)]
       )
     ) %>%
     ungroup() %>%
@@ -187,6 +186,11 @@ strata_full <- expand.grid(
 
 # Containers for patterns and scores, keyed by stratum name
 # (stratum_name now includes the HIV status)
+# Solutions chosen in 03_hierarchical_clustering_stratified.R (3 per stratum)
+selected_k_file <- file.path(PATH_HIERARCHICAL_STRATIFIED_TABLES, "k_selection_hierarchical.csv")
+if (!file.exists(selected_k_file)) stop("Run 03_hierarchical_clustering_stratified.R first: ", selected_k_file)
+selected_k <- read_csv(selected_k_file, show_col_types = FALSE) %>% filter(selected)
+
 all_patterns <- list()
 all_scores   <- list()
 
@@ -238,10 +242,17 @@ for (i in seq_len(nrow(strata_full))) {
   }
   
   # Compute patient pattern scores and dominant pattern for each k
-  scores_stratum <- purrr::map_dfr(k_candidates, function(k_val) {
+  scores_stratum <- purrr::map_dfr(
+    selected_k$k[selected_k$sexo_val == sexo_actual & selected_k$edad_val == edad_actual &
+                 selected_k$status_val == status_actual],
+    function(k_val) {
     
     scores_k   <- compute_patient_pattern_scores(diag_stratum, patrones_multi_df, k_val)
-    dominant_k <- derive_dominant_pattern(scores_k)
+    dominant_k <- purrr::map_dfr(ASSIGNMENT_RULES, function(r) {
+      derive_dominant_pattern(scores_k, r) %>% mutate(rule = r)
+    }) %>%
+      pivot_wider(names_from = rule, values_from = dominant_pattern,
+                  names_prefix = "dominant_pattern_")
     
     scores_k %>%
       left_join(dominant_k, by = "patient_id") %>%
@@ -260,22 +271,19 @@ for (i in seq_len(nrow(strata_full))) {
 # 7. STRATA DEFINITION FOR HEATMAPS ------------------------------------------
 
 # One heatmap per sex × age × HIV status × k combination
-estratos <- expand.grid(
-  sexo_val   = c("MALE", "FEMALE"),
-  edad_val   = c("under_45", "45to65", "over_65"),
-  status_val = c("ctl", "hiv"),
-  k_val      = k_candidates,
-  stringsAsFactors = FALSE
-)
+estratos <- selected_k %>%
+  transmute(sexo_val, edad_val, status_val, k_val = k) %>%
+  tidyr::crossing(rule = ASSIGNMENT_RULES)
 
 # 8. MAIN HEATMAP LOOP -------------------------------------------------------
 
-purrr::pwalk(estratos, function(sexo_val, edad_val, status_val, k_val) {
+rule_results <- purrr::pmap(estratos, function(sexo_val, edad_val, status_val, k_val, rule) {
   
   sexo_sel   <- sexo_val
   edad_sel   <- edad_val
   status_sel <- status_val
   k_sel      <- k_val
+  rule_sel   <- rule
   
   stratum_name <- paste(sexo_sel, edad_sel, status_sel, sep = "_")
   
@@ -284,9 +292,8 @@ purrr::pwalk(estratos, function(sexo_val, edad_val, status_val, k_val) {
   
   # 8.1 Assign each patient to the dominant pattern for the current k
   patient_clusters <- scores_stratum %>%
-    filter(k == k_sel, !is.na(dominant_pattern)) %>%
-    select(patient_id, cluster = dominant_pattern) %>%
-    mutate(cluster = as.character(cluster)) %>%
+    filter(k == k_sel, !is.na(.data[[paste0("dominant_pattern_", rule_sel)]])) %>%
+    transmute(patient_id, cluster = as.character(.data[[paste0("dominant_pattern_", rule_sel)]])) %>%
     distinct(patient_id, .keep_all = TRUE)
   
   if (nrow(patient_clusters) == 0) {
@@ -343,23 +350,34 @@ purrr::pwalk(estratos, function(sexo_val, edad_val, status_val, k_val) {
     return(NULL)
   }
   
-  hm_files <- oe_heatmap_files(PATH_HIERARCHICAL_STRATIFIED_HEATMAPS, "hierarchical_stratified",
+  hm_files <- oe_heatmap_files(file.path(PATH_HIERARCHICAL_STRATIFIED_HEATMAPS, rule_sel),
+                               paste0("hierarchical_stratified_", rule_sel),
                                sexo_sel, edad_sel, status_sel, k_sel)
   disease_map_plot <- patrones_subset %>%
     transmute(enfermedad_col, enfermedad, cluster_enfermedad, sign = "pos")
 
-  make_oe_heatmap(
+  res <- make_oe_heatmap(
     cohort_stratum = cohort_stratum,
     disease_map    = disease_map_plot,
     clusters       = as.character(seq_len(k_sel)),
     title_core     = paste0("Observed/Expected Ratio (k=", k_sel, ") - ",
                             sexo_sel, " | Age: ", edad_sel,
-                            " | Status: ", toupper(status_sel)),
+                            " | Status: ", toupper(status_sel),
+                            " | Assign: ", rule_sel),
     out_html = hm_files$html,
     out_csv  = hm_files$csv
   )
-  invisible(NULL)
+  if (is.null(res)) return(NULL)
+  list(sexo_val = sexo_sel, edad_val = edad_sel, status_val = status_sel,
+       k = k_sel, rule = rule_sel, table = res$table,
+       assignment = cohort_stratum[, c("patient_id", "cluster")])
 })
+
+# Sensitivity of the results to the assignment rule (count vs proportion)
+compare_assignment_rules(
+  rule_results,
+  file.path(PATH_HIERARCHICAL_STRATIFIED_TABLES, "assignment_rule_comparison.csv")
+)
 
 # 9. EXPORT PATIENT-LEVEL PATTERN SCORES -------------------------------------
 
@@ -377,7 +395,7 @@ patient_pattern_scores_stratified <- bind_rows(all_scores) %>%
     n_diseases,
     proportion,
     weighted_score,
-    dominant_pattern
+    starts_with("dominant_pattern_")
   ) %>%
   arrange(sexo_val, edad_val, status_val, k, patient_id, pattern)
 
@@ -385,6 +403,6 @@ write_csv(
   patient_pattern_scores_stratified,
   file.path(
     PATH_HIERARCHICAL_STRATIFIED_PATIENT_DATA,
-    "patient_pattern_scores_stratified_k3_k7.csv"
+    "patient_pattern_scores_stratified_selected_k.csv"
   )
 )

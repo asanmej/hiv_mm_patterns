@@ -63,6 +63,11 @@ if (length(missing_pkg) > 0) {
 invisible(lapply(pkg, library, character.only = TRUE))
 rm(pkg, missing_pkg)
 
+# Patient assignment rules to run and compare (hierarchical and EFA):
+#   "count"      pattern where the patient has the most diseases
+#   "proportion" pattern whose diseases the patient has in the highest percentage
+ASSIGNMENT_RULES <- c("count", "proportion")
+
 # 3. Paths --------------------------------------------------------------------
 
 ## Project root (requires an .Rproj, .git or .here file in the project root)

@@ -410,15 +410,27 @@ make_oe_heatmap <- function(cohort_stratum, disease_map, clusters,
 # Used for hierarchical clustering and EFA (disease-based methods). LCA uses the
 # modal posterior class (already a membership probability).
 #
-#   count_j      = number of the patient's diseases that belong to pattern j
-#   membership_j = count_j / sum_j count_j
-#   cluster      = argmax_j membership_j ; NA if there is a tie or no disease
-#                  of any pattern (the patient stays in the stratum for O/E)
+# For every patient and pattern j:
+#   count_j = number of the patient's diseases that belong to pattern j
+#   size_j  = number of diseases of pattern j
+# Two assignment rules (see ASSIGNMENT_RULES in 00_config.R):
+#   "count"      score_j = count_j            -> pattern where the patient has
+#                                                MORE diseases (favours big patterns)
+#   "proportion" score_j = count_j / size_j   -> pattern whose diseases the patient
+#                                                has in the HIGHEST PERCENTAGE
+# The patient goes to the pattern with the highest score; a tie or no disease of
+# any pattern leaves the patient unassigned (cluster = NA). Unassigned patients
+# stay in the stratum for the O/E calculation.
 #
 # patterns: data frame (enfermedad_col, pattern) ; a disease can be in several
 #           patterns (EFA cross-loadings), it then counts for each of them.
-assign_patients_by_membership <- function(cohort, patterns) {
+assign_patients_by_membership <- function(cohort, patterns, rule = c("count", "proportion")) {
+  rule <- match.arg(rule)
   pats <- sort(unique(as.character(patterns$pattern)))
+  size <- vapply(pats, function(p) {
+    length(intersect(unique(patterns$enfermedad_col[as.character(patterns$pattern) == p]),
+                     colnames(cohort)))
+  }, numeric(1))
   counts <- sapply(pats, function(p) {
     cols <- unique(patterns$enfermedad_col[as.character(patterns$pattern) == p])
     cols <- intersect(cols, colnames(cohort))
@@ -429,12 +441,64 @@ assign_patients_by_membership <- function(cohort, patterns) {
   })
   if (is.null(dim(counts))) counts <- matrix(counts, nrow = nrow(cohort))
   colnames(counts) <- pats
-  tot <- rowSums(counts)
-  mem <- counts / ifelse(tot == 0, NA, tot)
-  mx  <- apply(counts, 1, max)
-  n_max <- apply(counts, 1, function(r) sum(r == max(r)))
-  cluster <- pats[apply(counts, 1, which.max)]
+  score <- if (rule == "count") counts else sweep(counts, 2, pmax(size, 1), "/")
+  mx    <- apply(score, 1, max)
+  n_max <- apply(score, 1, function(r) sum(abs(r - max(r)) < 1e-12))
+  cluster <- pats[apply(score, 1, which.max)]
   cluster[mx == 0 | n_max > 1] <- NA_character_
-  tibble(patient_id = cohort$patient_id, cluster = cluster,
-         max_membership = suppressWarnings(apply(mem, 1, function(r) if (all(is.na(r))) NA_real_ else max(r, na.rm = TRUE))))
+  tibble(patient_id = cohort$patient_id, cluster = cluster, max_score = mx)
+}
+
+# 6. COMPARISON OF THE TWO ASSIGNMENT RULES -------------------------------------
+# results: list returned by pmap over (stratum, k, rule); every element is NULL or
+#   list(sexo_val, edad_val, status_val, k, rule, table, assignment), where
+#   table = make_oe_heatmap()$table and assignment = data frame(patient_id, cluster)
+#   of ALL the patients of the stratum (cluster = NA when not assigned).
+# Output: one row per stratum x k with
+#   - how many patients are assigned with each rule,
+#   - % of patients assigned with both rules that change cluster,
+#   - agreement of the O/E values (Spearman, median |log2 change|) and % of cells
+#     that change colour band.
+compare_assignment_rules <- function(results, out_csv = NULL) {
+  results <- Filter(Negate(is.null), results)
+  if (length(results) == 0) return(invisible(NULL))
+  key <- vapply(results, function(r) paste(r$sexo_val, r$edad_val, r$status_val, r$k, sep = "|"), "")
+  rl  <- vapply(results, function(r) r$rule, "")
+  out <- list()
+  for (kk in unique(key)) {
+    ia <- which(key == kk & rl == "count")
+    ib <- which(key == kk & rl == "proportion")
+    if (length(ia) != 1 || length(ib) != 1) next
+    A <- results[[ia]]; B <- results[[ib]]
+    asg   <- merge(A$assignment, B$assignment, by = "patient_id", suffixes = c("_a", "_b"))
+    both  <- !is.na(asg$cluster_a) & !is.na(asg$cluster_b)
+    cells <- merge(A$table[, c("enfermedad", "cluster", "value")],
+                   B$table[, c("enfermedad", "cluster", "value")],
+                   by = c("enfermedad", "cluster"), suffixes = c("_a", "_b"))
+    ok <- is.finite(cells$value_a) & is.finite(cells$value_b)
+    out[[kk]] <- data.frame(
+      sexo_val = A$sexo_val, edad_val = A$edad_val, status_val = A$status_val, k = A$k,
+      n_stratum = nrow(asg),
+      n_assigned_count      = sum(!is.na(asg$cluster_a)),
+      n_assigned_proportion = sum(!is.na(asg$cluster_b)),
+      pct_assigned_count      = round(100 * mean(!is.na(asg$cluster_a)), 1),
+      pct_assigned_proportion = round(100 * mean(!is.na(asg$cluster_b)), 1),
+      pct_patients_changing_cluster =
+        if (any(both)) round(100 * mean(asg$cluster_a[both] != asg$cluster_b[both]), 1) else NA_real_,
+      n_cells_compared = sum(ok),
+      oe_spearman = if (sum(ok) > 2) suppressWarnings(round(cor(cells$value_a[ok], cells$value_b[ok], method = "spearman"), 3)) else NA_real_,
+      oe_median_abs_log2_change =
+        if (any(ok)) round(median(abs(log2((cells$value_b[ok] + 0.01) / (cells$value_a[ok] + 0.01)))), 3) else NA_real_,
+      pct_cells_changing_colour_band =
+        if (any(ok)) round(100 * mean(findInterval(cells$value_a[ok], OE_BREAKS) != findInterval(cells$value_b[ok], OE_BREAKS)), 1) else NA_real_,
+      stringsAsFactors = FALSE
+    )
+  }
+  res <- do.call(rbind, out)
+  if (!is.null(out_csv) && !is.null(res)) {
+    dir.create(dirname(out_csv), recursive = TRUE, showWarnings = FALSE)
+    write.csv(res, out_csv, row.names = FALSE)
+    message("Assignment-rule comparison saved: ", out_csv)
+  }
+  invisible(res)
 }

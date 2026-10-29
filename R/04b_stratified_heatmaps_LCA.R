@@ -161,7 +161,7 @@ strata_grid <- pattern_data %>%
 
 # 6. Generate one heatmap for each stratum and evaluated k
 
-pwalk(strata_grid, function(stratum_sex, stratum_age, stratum_status, k_val) {
+lca_status <- pmap_chr(strata_grid, function(stratum_sex, stratum_age, stratum_status, k_val) {
   
   stratum_name <- paste(stratum_sex, stratum_age, stratum_status, sep = "_")
   
@@ -170,7 +170,7 @@ pwalk(strata_grid, function(stratum_sex, stratum_age, stratum_status, k_val) {
   
   if (is.null(model_disease_names)) {
     message("Skipped (no disease list available): ", stratum_name, " | k = ", k_val)
-    return(NULL)
+    return("skipped: no disease list (model .RData not found)")
   }
   
   disease_map <- tibble(dis_col_clean = model_disease_names) %>%
@@ -204,7 +204,7 @@ pwalk(strata_grid, function(stratum_sex, stratum_age, stratum_status, k_val) {
   
   if (nrow(patient_clusters) == 0) {
     message("No patient assignments for ", stratum_name, " | k = ", k_val)
-    return(NULL)
+    return("skipped: no patient assignments")
   }
   
   # 6.3 Disease status of the patients of this stratum 
@@ -223,14 +223,14 @@ pwalk(strata_grid, function(stratum_sex, stratum_age, stratum_status, k_val) {
   
   if (nrow(cohort_stratum) == 0) {
     message("No patients for ", stratum_name, " | k = ", k_val)
-    return(NULL)
+    return("skipped: no patients in disease matrix")
   }
   
   # 6.4-6.10 Statistics (O/E, Fisher vs rest + FDR), marks and HTML output are
   # produced by the shared function, identical for hierarchical / LCA / EFA.
   hm_files <- oe_heatmap_files(PATH_LCA_HEATMAPS, "LCA",
                                stratum_sex, stratum_age, stratum_status, k_val)
-  make_oe_heatmap(
+  res <- make_oe_heatmap(
     cohort_stratum = cohort_stratum,
     disease_map    = disease_map %>%
       transmute(enfermedad_col, enfermedad, cluster_enfermedad = NA_character_),
@@ -241,6 +241,17 @@ pwalk(strata_grid, function(stratum_sex, stratum_age, stratum_status, k_val) {
     out_html = hm_files$html,
     out_csv  = hm_files$csv
   )
-  invisible(NULL)
+  if (is.null(res)) return("skipped: no valid O/E ratios")
+  "ok"
 }
 )
+
+# Summary: tell clearly what was (not) generated
+message("
+LCA heatmaps: ", sum(lca_status == "ok"), " generated out of ", length(lca_status), " solutions")
+if (any(lca_status != "ok")) print(table(lca_status[lca_status != "ok"]))
+if (!any(lca_status == "ok")) {
+  stop("No LCA heatmap was generated. Check the messages above (model .RData files in ",
+       PATH_LCA_MODELS, " and patient_pattern_scores_LCA.csv in ", PATH_LCA_PATIENT_DATA, ").",
+       call. = FALSE)
+}

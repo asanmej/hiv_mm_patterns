@@ -19,7 +19,7 @@ source(here::here("R", "00_config.R"))
 
 # 2. Steps to run -------------------------------------------------------------
 RUN <- list(
-  hierarchical_full       = TRUE,
+  hierarchical_full       = FALSE,   # not used any more (see header)
   hierarchical_stratified = TRUE,
   lca                     = TRUE,
   efa                     = TRUE
@@ -56,6 +56,8 @@ if (RUN$hierarchical_full) {
 if (RUN$hierarchical_stratified) {
   run_step("Hierarchical stratified: clustering in each stratum",
            r_script("03_hierarchical_clustering_stratified.R"))
+  run_step("Hierarchical stratified: full dendrograms (no cut)",
+           r_script("03b_hierarchical_dendrograms.R"))
   run_step("Hierarchical stratified: patient scores and O/E heatmaps",
            r_script("05_stratified_heatmaps.R"))
 }

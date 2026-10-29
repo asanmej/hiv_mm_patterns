@@ -165,6 +165,20 @@ build_tetrachoric_heatmap <- function(corr_ordered, title_text) {
 
 # 5. MAIN STRATIFIED LOOP ----------------------------------------------------
 
+# Choice of the 3 solutions shown to the clinicians (per stratum):
+#   - a solution is VALID if every cluster has at least `min_diseases` diseases
+#     (a cluster of a single disease is not a pattern);
+#   - among the valid ones, the 3 with the highest mean silhouette are selected
+#     (ties: smaller k); if fewer than 3 are valid, the best invalid ones fill in.
+select_k_hierarchical <- function(k_stats, n_select = 3, min_diseases = 2) {
+  k_stats$valid <- k_stats$min_size >= min_diseases
+  ord <- order(!k_stats$valid, -k_stats$mean_silhouette, k_stats$k)
+  k_stats$selected <- FALSE
+  k_stats$selected[ord[seq_len(min(n_select, nrow(k_stats)))]] <- TRUE
+  k_stats
+}
+k_selection_all <- list()
+
 for (i in seq_len(nrow(strata))) {
   
   sexo_actual   <- strata$sexo_val[i]
@@ -286,6 +300,24 @@ for (i in seq_len(nrow(strata))) {
   }
   
   # 5.9 Export disease-to-cluster assignments for the current stratum
+  # Diagnostics of every candidate solution and selection of 3
+  n_leaves <- length(hc$order)
+  k_stats <- do.call(rbind, lapply(k_candidates, function(k_val) {
+    cl <- cutree(hc, k = k_val)
+    data.frame(
+      sexo_val = sexo_actual, edad_val = edad_actual, status_val = status_actual,
+      k = k_val,
+      n_patients = nrow(diag_stratum),
+      n_diseases = n_leaves,
+      min_size = min(table(cl)),
+      max_size = max(table(cl)),
+      mean_silhouette = round(mean(cluster::silhouette(cl, jaccard_dist)[, "sil_width"]), 4),
+      # jump in merge height between k+1 -> k and k -> k-1 clusters (information)
+      height_gap = round(hc$height[n_leaves - k_val + 1] - hc$height[n_leaves - k_val], 4)
+    )
+  }))
+  k_selection_all[[stratum_name]] <- select_k_hierarchical(k_stats)
+
   write_csv(
     cluster_assignments,
     file.path(stratum_tables, "jaccard_disease_patterns_multi_k.csv")
@@ -302,3 +334,11 @@ for (i in seq_len(nrow(strata))) {
     file.path(stratum_tables, "jaccard_disease_patterns_multi_k.csv")
   )
 }
+
+# Selection of solutions of all strata (read by 05_stratified_heatmaps.R)
+k_selection_table <- do.call(rbind, k_selection_all)
+write_csv(
+  k_selection_table,
+  file.path(PATH_HIERARCHICAL_STRATIFIED_TABLES, "k_selection_hierarchical.csv")
+)
+message("Selected solutions saved in k_selection_hierarchical.csv")

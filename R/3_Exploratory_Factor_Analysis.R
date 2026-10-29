@@ -35,10 +35,11 @@ stratum <- setDT(expand.grid(sexo = c("HOMBRE", "MUJER"), edad = c("under 45", "
 stratum <- rbind(stratum, list("Global", NA))
 
 prevalenceProportionVec <- 2
-# Common rule for the three methods (EFA, hierarchical, LCA): same range of
-# solutions. The number suggested by the parallel analysis is still printed
-# but it no longer limits the range of factors that are exported.
-kRange <- 3:7
+# Solutions exported per stratum and group (3, like LCA and the hierarchical
+# clustering): half of the factors suggested by the parallel analysis (rounded
+# down), one below and one above. If the lowest one falls under kFloor, the
+# three solutions are kFloor, kFloor + 1 and kFloor + 2.
+kFloor <- 3
 # Minimum number of variables per factor (below this the model is not fitted)
 minVarPerFactor <- 3
 correlationKmo <- 0.5
@@ -144,20 +145,26 @@ for (strata in 1:nrow(stratum)) {
       dev.off()
       
       # If we wanted simple solutions modified nMaxFactors to contain all solutions
-      nMaxFactors <- nFactors$nfact
-      
-      if(nMaxFactors <= 2){
+      nfactDetected <- nFactors$nfact
+      if (is.na(nfactDetected) || nfactDetected <= 2) {
         warning("Optimal estimated factors less or equal 2. Check data!")
-        nMaxFactors <- 3
-      }else{
-        nMaxFactors <- ceiling(nMaxFactors/2)+2
+        kEfa <- kFloor + 0:2
+      } else {
+        kCenter <- floor(nfactDetected / 2)
+        kEfa <- c(kCenter - 1, kCenter, kCenter + 1)
+        if (min(kEfa) < kFloor) kEfa <- kFloor + 0:2
       }
-      
-      # @param rotate - method to rotate the data for factoring. Take into account:
-      # Orthogonal rotations if we assume our factors are NOT correlated. Such as none, varimax, quartimax, bentlerT, equamax, varimin, geominT and bifactor
-      # Oblique rotations if we assume our factors are correlated. Such as oblimin, geominQ, Promax or target.rot
-      message("Parallel analysis suggests ", nFactors$nfact, " factors; exporting kRange = ", paste(kRange, collapse = ", "))
-      for(l in kRange){
+      message("Parallel analysis suggests ", nfactDetected, " factors (", strataLabel, ", ",
+              gsub("cols", "", t), "); exporting solutions: ", paste(kEfa, collapse = ", "))
+
+      # Remove the solutions of previous runs so that only the current ones remain
+      unlink(list.files(pathEfaTables, full.names = TRUE,
+                        pattern = paste0("_", gsub("cols", "", t), "_", prevalenceProportion, "%_[0-9]+factors\.csv$")))
+      unlink(list.files(pathEfaModels, full.names = TRUE,
+                        pattern = paste0("^efa_models_", gsub("cols", "", t), "_", prevalenceProportion, "%_[0-9]+factors\.rds$")))
+
+      # Oblique rotation (oblimin): factors are allowed to be correlated
+      for(l in kEfa){
         
         if(length(cols) < minVarPerFactor * l){
           message("Skipping ", l, " factors (", strataLabel, ", ", gsub("cols", "", t), "): only ", length(cols), " variables")
