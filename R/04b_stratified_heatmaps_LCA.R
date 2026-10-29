@@ -247,8 +247,7 @@ lca_status <- pmap_chr(strata_grid, function(stratum_sex, stratum_age, stratum_s
 )
 
 # Summary: tell clearly what was (not) generated
-message("
-LCA heatmaps: ", sum(lca_status == "ok"), " generated out of ", length(lca_status), " solutions")
+message("\nLCA heatmaps: ", sum(lca_status == "ok"), " generated out of ", length(lca_status), " solutions")
 if (any(lca_status != "ok")) print(table(lca_status[lca_status != "ok"]))
 if (!any(lca_status == "ok")) {
   stop("No LCA heatmap was generated. Check the messages above (model .RData files in ",
