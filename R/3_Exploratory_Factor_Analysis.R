@@ -159,9 +159,9 @@ for (strata in 1:nrow(stratum)) {
 
       # Remove the solutions of previous runs so that only the current ones remain
       unlink(list.files(pathEfaTables, full.names = TRUE,
-                        pattern = paste0("_", gsub("cols", "", t), "_", prevalenceProportion, "%_[0-9]+factors\.csv$")))
+                        pattern = paste0("_", gsub("cols", "", t), "_", prevalenceProportion, "%_[0-9]+factors\\.csv$")))
       unlink(list.files(pathEfaModels, full.names = TRUE,
-                        pattern = paste0("^efa_models_", gsub("cols", "", t), "_", prevalenceProportion, "%_[0-9]+factors\.rds$")))
+                        pattern = paste0("^efa_models_", gsub("cols", "", t), "_", prevalenceProportion, "%_[0-9]+factors\\.rds$")))
 
       # Oblique rotation (oblimin): factors are allowed to be correlated
       for(l in kEfa){
