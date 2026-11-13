@@ -61,7 +61,7 @@ OE_COLORS <- c(
   "#99000D"   # > 6
 )
 
-MIN_PATIENTS <- 30    # clusters below this size are striped
+MIN_PATIENTS <- MIN_PATIENTS_CLUSTER   # defined in 00_config.R: clusters below this size are striped
 MIN_CASES    <- 10    # cells with fewer cases are marked with a dagger
 FDR_ALPHA    <- 0.05
 NEUTRAL_LOW  <- 0.9

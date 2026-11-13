@@ -36,7 +36,7 @@ source(file.path(PATH_R, "06_heatmap_common.R"))
 # 1. CONFIGURATION ------------------------------------------------------------
 
 EFA_PREV       <- 2          # prevalence threshold (%) used in the EFA file names
-LOADING_CUTOFF <- 0.20       # |loading| to assign a disease to a factor
+LOADING_CUTOFF <- EFA_LOADING_CUTOFF   # defined in 00_config.R: |loading| to assign a disease to a factor
 
 # Labels used by the EFA script for sex and age bands
 efa_sex <- c(MALE = "HOMBRE", FEMALE = "MUJER")

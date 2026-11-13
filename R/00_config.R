@@ -68,6 +68,21 @@ rm(pkg, missing_pkg)
 #   "proportion" pattern whose diseases the patient has in the highest percentage
 ASSIGNMENT_RULES <- c("count", "proportion")
 
+# Thresholds shared by the three techniques to decide whether a pattern is worth
+# showing to the clinicians (single definition; do not repeat these numbers in
+# other scripts):
+#   MIN_PATIENTS_CLUSTER  patients assigned to a pattern / cluster / class; below
+#                         this the heatmap column is striped (06_heatmap_common.R)
+#                         and EFA solutions containing it are not selected
+#   MIN_DISEASES_PATTERN  diseases defining a pattern (one disease is not a pattern)
+#   EFA_LOADING_CUTOFF    loading from which a disease belongs to an EFA factor
+#   K_VIABILITY_RULES     assignment rules under which EVERY EFA pattern must reach
+#                         MIN_PATIENTS_CLUSTER for the solution to be selected
+MIN_PATIENTS_CLUSTER <- 30
+MIN_DISEASES_PATTERN <- 2
+EFA_LOADING_CUTOFF   <- 0.20
+K_VIABILITY_RULES    <- ASSIGNMENT_RULES
+
 # 3. Paths --------------------------------------------------------------------
 
 ## Project root (requires an .Rproj, .git or .here file in the project root)

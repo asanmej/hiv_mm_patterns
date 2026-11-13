@@ -170,7 +170,7 @@ build_tetrachoric_heatmap <- function(corr_ordered, title_text) {
 #     (a cluster of a single disease is not a pattern);
 #   - among the valid ones, the 3 with the highest mean silhouette are selected
 #     (ties: smaller k); if fewer than 3 are valid, the best invalid ones fill in.
-select_k_hierarchical <- function(k_stats, n_select = 3, min_diseases = 2) {
+select_k_hierarchical <- function(k_stats, n_select = 3, min_diseases = MIN_DISEASES_PATTERN) {
   k_stats$valid <- k_stats$min_size >= min_diseases
   ord <- order(!k_stats$valid, -k_stats$mean_silhouette, k_stats$k)
   k_stats$selected <- FALSE
