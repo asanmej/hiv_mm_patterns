@@ -17,6 +17,9 @@
 # (Main.R has already done it). The environment is NOT cleared on purpose.
 if (!exists("PATH_R")) source(here::here("R", "00_config.R"))
 
+# assign_patients_by_membership(): same patient -> pattern rule as the heatmaps
+source(file.path(PATH_R, "06_heatmap_common.R"))
+
 ######################################
 ##### Exploratory Factor Analysis ####
 ######################################
@@ -35,10 +38,64 @@ stratum <- setDT(expand.grid(sexo = c("HOMBRE", "MUJER"), edad = c("under 45", "
 stratum <- rbind(stratum, list("Global", NA))
 
 prevalenceProportionVec <- 2
-# Solutions exported per stratum and group (3, like LCA and the hierarchical
-# clustering): half of the factors suggested by the parallel analysis (rounded
-# down), one below and one above. If the lowest one falls under kFloor, the
-# three solutions are kFloor, kFloor + 1 and kFloor + 2.
+
+# Viability of one EFA solution (see the rule above).
+#   faResult   : model returned by psych::fa()
+#   groupData  : data.frame of the patients of the group (patient_id + diseases)
+# Returns a one-row data.frame with the minimum number of diseases per factor, the
+# minimum number of patients per factor under each rule and the verdict.
+efaCheckSolution <- function(faResult, groupData) {
+  L <- round(faResult$loadings[seq_len(nrow(faResult$loadings)), , drop = FALSE], 3)
+  k <- ncol(L)
+  idx <- which(L >= EFA_LOADING_CUTOFF, arr.ind = TRUE)
+  
+  nDis <- tabulate(idx[, "col"], nbins = k)
+  minPat <- setNames(rep(0, length(K_VIABILITY_RULES)), K_VIABILITY_RULES)
+  
+  if (nrow(idx) > 0) {
+    patterns <- data.frame(
+      enfermedad_col = rownames(L)[idx[, "row"]],
+      pattern        = as.character(idx[, "col"]),
+      stringsAsFactors = FALSE
+    )
+    for (r in K_VIABILITY_RULES) {
+      a <- assign_patients_by_membership(groupData, patterns, rule = r)
+      minPat[[r]] <- min(tabulate(match(a$cluster, as.character(seq_len(k))), nbins = k))
+    }
+  }
+  
+  out <- data.frame(
+    k = k,
+    min_diseases_per_factor = min(nDis),
+    stringsAsFactors = FALSE
+  )
+  for (r in K_VIABILITY_RULES) out[[paste0("min_patients_", r)]] <- minPat[[r]]
+  out$viable <- out$min_diseases_per_factor >= MIN_DISEASES_PATTERN &&
+    all(minPat >= MIN_PATIENTS_CLUSTER)
+  out
+}
+
+# Container for the selection table (saved at the end of the script)
+efaSelection <- list()
+# Solutions exported per stratum and group: 3 at most (like LCA and the
+# hierarchical clustering).
+#
+# Starting point: half of the factors suggested by the parallel analysis
+# (rounded down), one below and one above, i.e. the solutions
+# floor(n/2) - 1, floor(n/2), floor(n/2) + 1 (never below kFloor, 3 solutions
+# kFloor, kFloor + 1, kFloor + 2 in that case).
+#
+# Cap: a solution is VIABLE only if all its patterns are real patterns, i.e.
+#   - every factor has at least MIN_DISEASES_PATTERN diseases with a positive
+#     loading >= EFA_LOADING_CUTOFF, and
+#   - every factor reaches MIN_PATIENTS_CLUSTER patients under EVERY assignment
+#     rule of K_VIABILITY_RULES (so no heatmap column of the solution is striped).
+# The number of factors is scanned upwards from kFloor and stops at the first
+# solution that is not viable (more factors only make patterns smaller). The
+# solutions exported are the three highest viable ones that do not exceed the
+# starting point above. The same rule applies to every stratum; strata with few
+# patients or few diseases simply end up with fewer factors.
+# (All thresholds are defined in 00_config.R.)
 kFloor <- 3
 # Minimum number of variables per factor (below this the model is not fitted)
 minVarPerFactor <- 3
@@ -144,34 +201,31 @@ for (strata in 1:nrow(stratum)) {
         
       dev.off()
       
-      # If we wanted simple solutions modified nMaxFactors to contain all solutions
+      grpLabel <- gsub("cols", "", t)
+      grpData  <- as.data.frame(diagSub[HIV_infection == i])
+      
+      # Starting point of the solutions: half of the factors suggested by the
+      # parallel analysis (rounded down) + 1 is the highest solution considered
       nfactDetected <- nFactors$nfact
       if (is.na(nfactDetected) || nfactDetected <= 2) {
         warning("Optimal estimated factors less or equal 2. Check data!")
-        kEfa <- kFloor + 0:2
+        kUpper <- kFloor + 2
       } else {
-        kCenter <- floor(nfactDetected / 2)
-        kEfa <- c(kCenter - 1, kCenter, kCenter + 1)
-        if (min(kEfa) < kFloor) kEfa <- kFloor + 0:2
+        kUpper <- max(floor(nfactDetected / 2) + 1, kFloor + 2)
       }
-      message("Parallel analysis suggests ", nfactDetected, " factors (", strataLabel, ", ",
-              gsub("cols", "", t), "); exporting solutions: ", paste(kEfa, collapse = ", "))
-
-      # Remove the solutions of previous runs so that only the current ones remain
-      unlink(list.files(pathEfaTables, full.names = TRUE,
-                        pattern = paste0("_", gsub("cols", "", t), "_", prevalenceProportion, "%_[0-9]+factors\\.csv$")))
-      unlink(list.files(pathEfaModels, full.names = TRUE,
-                        pattern = paste0("^efa_models_", gsub("cols", "", t), "_", prevalenceProportion, "%_[0-9]+factors\\.rds$")))
-
-      # Oblique rotation (oblimin): factors are allowed to be correlated
-      for(l in kEfa){
+      
+      # Scan upwards from kFloor; stop at the first solution that is not viable.
+      # Oblique rotation (oblimin): factors are allowed to be correlated.
+      efaFits <- list()
+      efaRows <- list()
+      for (l in kFloor:kUpper) {
         
-        if(length(cols) < minVarPerFactor * l){
-          message("Skipping ", l, " factors (", strataLabel, ", ", gsub("cols", "", t), "): only ", length(cols), " variables")
-          next
+        if (length(cols) < minVarPerFactor * l) {
+          message("Stop scanning at ", l, " factors (", strataLabel, ", ", grpLabel, "): only ", length(cols), " variables")
+          break
         }
         
-        faResult <-
+        faResult <- tryCatch(
           suppressMessages(suppressWarnings(
             fa(
               diagSub[HIV_infection == i, ..cols],
@@ -180,13 +234,66 @@ for (strata in 1:nrow(stratum)) {
               cor = "tet",
               rotate = "oblimin"
             )
-          ))
+          )),
+          error = function(e) {
+            message("fa() failed with ", l, " factors (", strataLabel, ", ", grpLabel, "): ", conditionMessage(e))
+            NULL
+          }
+        )
+        if (is.null(faResult)) break
+        
+        chk <- efaCheckSolution(faResult, grpData)
+        efaFits[[as.character(l)]] <- faResult
+        efaRows[[as.character(l)]] <- chk
+        
+        if (!chk$viable) break
+      }
+      
+      efaScan <- do.call(rbind, efaRows)
+      
+      # Solutions to export: the three highest viable ones (never below kFloor)
+      if (is.null(efaScan)) {
+        kEfa <- integer(0)
+      } else if (!any(efaScan$viable)) {
+        warning("No viable EFA solution in ", strataLabel, " (", grpLabel,
+                "): the smallest one is exported anyway, check it.")
+        kEfa <- efaScan$k[1]
+      } else {
+        kTop <- max(efaScan$k[efaScan$viable])
+        kEfa <- seq(max(kFloor, kTop - 2), kTop)
+      }
+      
+      message("Parallel analysis suggests ", nfactDetected, " factors (", strataLabel, ", ",
+              grpLabel, "); highest solution considered: ", kUpper,
+              "; exporting solutions: ", paste(kEfa, collapse = ", "))
+      
+      # Record the scan of this stratum and group
+      if (!is.null(efaScan)) {
+        efaScan$stratum        <- strataLabel
+        efaScan$group          <- grpLabel
+        efaScan$n_patients     <- nrow(grpData)
+        efaScan$n_diseases     <- length(cols)
+        efaScan$nfact_parallel <- nfactDetected
+        efaScan$k_highest_considered <- kUpper
+        efaScan$selected       <- efaScan$k %in% kEfa
+        efaSelection[[paste(strataLabel, grpLabel, sep = "_")]] <- efaScan
+      }
+      
+      # Remove the solutions of previous runs so that only the current ones remain
+      unlink(list.files(pathEfaTables, full.names = TRUE,
+                        pattern = paste0("_", grpLabel, "_", prevalenceProportion, "%_[0-9]+factors\\.csv$")))
+      unlink(list.files(pathEfaModels, full.names = TRUE,
+                        pattern = paste0("^efa_models_", grpLabel, "_", prevalenceProportion, "%_[0-9]+factors\\.rds$")))
+      
+      for (l in kEfa) {
+        
+        faResult <- efaFits[[as.character(l)]]
         
         faLoadings <- as.data.frame(round(faResult$loadings[1:dim(faResult$loadings)[1], ], 3))
         setorderv(faLoadings, colnames(faLoadings)[-1], rep(-1, length(colnames(faLoadings)[-1])), na.last = T)
         
-        fwrite(faLoadings, paste0(pathEfaTables, "/efa_loadings_", strataLabel, "_", gsub("cols", "", t), "_", prevalenceProportion,"%_", l, "factors.csv"), encoding = "UTF-8", row.names = T)
-        saveRDS(faResult, paste0(pathEfaModels, "/efa_models_", gsub("cols", "", t), "_", prevalenceProportion,"%_", l, "factors.rds"))
+        fwrite(faLoadings, paste0(pathEfaTables, "/efa_loadings_", strataLabel, "_", grpLabel, "_", prevalenceProportion,"%_", l, "factors.csv"), encoding = "UTF-8", row.names = T)
+        saveRDS(faResult, paste0(pathEfaModels, "/efa_models_", grpLabel, "_", prevalenceProportion,"%_", l, "factors.rds"))
         
       }
       
@@ -223,5 +330,13 @@ for (strata in 1:nrow(stratum)) {
     }
   }
 }
+# Solutions scanned and selected in every stratum and group
+# (viable = every factor has >= MIN_DISEASES_PATTERN diseases and
+#  >= MIN_PATIENTS_CLUSTER patients under all the rules of K_VIABILITY_RULES)
+if (length(efaSelection) > 0) {
+  fwrite(rbindlist(efaSelection, fill = TRUE),
+         file.path(PATH_EFA_TABLES, "k_selection_EFA.csv"), encoding = "UTF-8")
+}
+
 # TODO reliability statistic such as alpha and omega to check results
 
