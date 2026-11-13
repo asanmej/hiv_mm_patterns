@@ -1,7 +1,9 @@
 # Non-shareable folders
 Data/
-Intermediate_data/
 Results/
+
+# Non-shareable files
+*.zip
 
 # History files
 .Rhistory

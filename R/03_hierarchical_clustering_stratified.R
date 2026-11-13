@@ -7,18 +7,18 @@
 #
 #   The analysis is repeated independently for each of the twelve
 #   sex × age × HIV status strata:
-#       MEN   | under_45 | ctl
-#       MEN   | under_45 | hiv
-#       MEN   | 45to65   | ctl
-#       MEN   | 45to65   | hiv
-#       MEN   | over_65  | ctl
-#       MEN   | over_65  | hiv
-#       WOMEN | under_45 | ctl
-#       WOMEN | under_45 | hiv
-#       WOMEN | 45to65   | ctl
-#       WOMEN | 45to65   | hiv
-#       WOMEN | over_65  | ctl
-#       WOMEN | over_65  | hiv
+#       MALE   | under_45 | ctl
+#       MALE   | under_45 | hiv
+#       MALE   | 45to65   | ctl
+#       MALE   | 45to65   | hiv
+#       MALE   | over_65  | ctl
+#       MALE   | over_65  | hiv
+#       FEMALE | under_45 | ctl
+#       FEMALE | under_45 | hiv
+#       FEMALE | 45to65   | ctl
+#       FEMALE | 45to65   | hiv
+#       FEMALE | over_65  | ctl
+#       FEMALE | over_65  | hiv
 #
 #   Unlike the LCA pipeline, where HIV status is also a stratification
 #   variable, here the clustering is estimated separately within each
@@ -32,7 +32,7 @@
 #   All thresholds, filters, clustering parameters and candidate
 #   solutions are identical to the original unstratified script.
 #   This script does not depend on the original pipeline: all outputs
-#   are written under PATH_INTERMEDIATE/stratified_hierarchical.
+#   are written under PATH_HIERARCHICAL_STRATIFIED_* (see 00_config.R).
 # -----------------------------------------------------------------------------
 
 # 1. PACKAGE MANAGEMENT ------------------------------------------------------
@@ -48,7 +48,7 @@ library(htmlwidgets)
 
 # Twelve sex × age × HIV status strata
 strata <- expand.grid(
-  sexo_val   = c("MEN", "WOMEN"),
+  sexo_val   = c("MALE", "FEMALE"),
   edad_val   = c("under_45", "45to65", "over_65"),
   status_val = c("ctl", "hiv"),
   stringsAsFactors = FALSE
@@ -60,18 +60,7 @@ k_candidates <- 3:7
 # Minimum disease prevalence filter (identical to the original script)
 min_prev <- 0.02
 
-# Root output directory for the stratified hierarchical clustering
-PATH_HCLUST_STRATIFIED <- file.path(
-  PATH_INTERMEDIATE,
-  "stratified_hierarchical"
-)
-
-dir.create(
-  PATH_HCLUST_STRATIFIED,
-  recursive = TRUE,
-  showWarnings = FALSE
-)
-
+# Output folders are defined in 00_config.R (PATH_HIERARCHICAL_STRATIFIED_*)
 # 3. DATA LOADING ----------------------------------------------------------
 
 # Load prevalent diagnostic data
@@ -87,8 +76,8 @@ cohort_stratified <- bdu_data %>%
   select(patient_id, sexo, edad, vih_bool) %>%
   mutate(
     sexo_clean = case_when(
-      str_detect(tolower(sexo), "h") ~ "MEN",
-      str_detect(tolower(sexo), "m") ~ "WOMEN",
+      str_detect(tolower(sexo), "h") ~ "MALE",
+      str_detect(tolower(sexo), "m") ~ "FEMALE",
       TRUE ~ as.character(sexo)
     ),
     grupo_edad = case_when(
@@ -176,6 +165,20 @@ build_tetrachoric_heatmap <- function(corr_ordered, title_text) {
 
 # 5. MAIN STRATIFIED LOOP ----------------------------------------------------
 
+# Choice of the 3 solutions shown to the clinicians (per stratum):
+#   - a solution is VALID if every cluster has at least `min_diseases` diseases
+#     (a cluster of a single disease is not a pattern);
+#   - among the valid ones, the 3 with the highest mean silhouette are selected
+#     (ties: smaller k); if fewer than 3 are valid, the best invalid ones fill in.
+select_k_hierarchical <- function(k_stats, n_select = 3, min_diseases = 2) {
+  k_stats$valid <- k_stats$min_size >= min_diseases
+  ord <- order(!k_stats$valid, -k_stats$mean_silhouette, k_stats$k)
+  k_stats$selected <- FALSE
+  k_stats$selected[ord[seq_len(min(n_select, nrow(k_stats)))]] <- TRUE
+  k_stats
+}
+k_selection_all <- list()
+
 for (i in seq_len(nrow(strata))) {
   
   sexo_actual   <- strata$sexo_val[i]
@@ -188,16 +191,12 @@ for (i in seq_len(nrow(strata))) {
   message("Processing stratum: ", stratum_name)
   message("=============================================================")
   
-  # 5.1 Stratum-specific output folder
-  stratum_dir <- file.path(
-    PATH_HCLUST_STRATIFIED,
-    sexo_actual,
-    edad_actual,
-    status_actual
-  )
-  
-  dir.create(stratum_dir, recursive = TRUE, showWarnings = FALSE)
-  
+  # 5.1 Stratum-specific output folders (figures / tables / models)
+  stratum_figures <- file.path(PATH_HIERARCHICAL_STRATIFIED_FIGURES, sexo_actual, edad_actual, status_actual)
+  stratum_tables  <- file.path(PATH_HIERARCHICAL_STRATIFIED_TABLES,  sexo_actual, edad_actual, status_actual)
+  stratum_models  <- file.path(PATH_HIERARCHICAL_STRATIFIED_MODELS,  sexo_actual, edad_actual, status_actual)
+  invisible(lapply(c(stratum_figures, stratum_tables, stratum_models),
+                   dir.create, recursive = TRUE, showWarnings = FALSE))
   # 5.2 Select patients belonging to the current sex × age stratum.
   # HIV status is deliberately NOT used here: both PLWH and controls
   # contribute to the same clustering solution.
@@ -271,7 +270,7 @@ for (i in seq_len(nrow(strata))) {
   saveWidget(
     p_corr,
     file.path(
-      stratum_dir,
+      stratum_figures,
       paste0("tetrachoric_correlation_", stratum_name, ".html")
     ),
     selfcontained = TRUE
@@ -301,19 +300,45 @@ for (i in seq_len(nrow(strata))) {
   }
   
   # 5.9 Export disease-to-cluster assignments for the current stratum
+  # Diagnostics of every candidate solution and selection of 3
+  n_leaves <- length(hc$order)
+  k_stats <- do.call(rbind, lapply(k_candidates, function(k_val) {
+    cl <- cutree(hc, k = k_val)
+    data.frame(
+      sexo_val = sexo_actual, edad_val = edad_actual, status_val = status_actual,
+      k = k_val,
+      n_patients = nrow(diag_stratum),
+      n_diseases = n_leaves,
+      min_size = min(table(cl)),
+      max_size = max(table(cl)),
+      mean_silhouette = round(mean(cluster::silhouette(cl, jaccard_dist)[, "sil_width"]), 4),
+      # jump in merge height between k+1 -> k and k -> k-1 clusters (information)
+      height_gap = round(hc$height[n_leaves - k_val + 1] - hc$height[n_leaves - k_val], 4)
+    )
+  }))
+  k_selection_all[[stratum_name]] <- select_k_hierarchical(k_stats)
+
   write_csv(
     cluster_assignments,
-    file.path(stratum_dir, "jaccard_disease_patterns_multi_k.csv")
+    file.path(stratum_tables, "jaccard_disease_patterns_multi_k.csv")
   )
   
   # 5.10 Save the hclust object for reproducibility
   saveRDS(
     hc,
-    file.path(stratum_dir, "hclust_ward_D2.rds")
+    file.path(stratum_models, "hclust_ward_D2.rds")
   )
   
   message(
     "Exported: ",
-    file.path(stratum_dir, "jaccard_disease_patterns_multi_k.csv")
+    file.path(stratum_tables, "jaccard_disease_patterns_multi_k.csv")
   )
 }
+
+# Selection of solutions of all strata (read by 05_stratified_heatmaps.R)
+k_selection_table <- do.call(rbind, k_selection_all)
+write_csv(
+  k_selection_table,
+  file.path(PATH_HIERARCHICAL_STRATIFIED_TABLES, "k_selection_hierarchical.csv")
+)
+message("Selected solutions saved in k_selection_hierarchical.csv")

@@ -883,7 +883,7 @@ df_patrones <- data.frame(
 # Save results in CSV
 write_csv(
   df_patrones,
-  file.path(PATH_INTERMEDIATE, "jaccard_disease_patterns.csv")
+  file.path(PATH_HIERARCHICAL_FULL_TABLES, "jaccard_disease_patterns.csv")
 )
 
 # Show summary of pathologies by cluster
@@ -940,7 +940,13 @@ df_multi_patrones <- reduce(multi_k_list, full_join, by = "enfermedad")
 # Save the multisolution table for clinical review
 write_csv(
   df_multi_patrones,
-  file.path(PATH_INTERMEDIATE, "jaccard_disease_patterns_multi_k.csv")
+  file.path(PATH_HIERARCHICAL_FULL_TABLES, "jaccard_disease_patterns_multi_k.csv")
+)
+
+# Save the hclust object for reproducibility (same as the stratified analysis)
+saveRDS(
+  hc_diseases,
+  file.path(PATH_HIERARCHICAL_FULL_MODELS, "hclust_ward_D2.rds")
 )
 
 ```
