@@ -152,6 +152,18 @@ min_n <- 300
 lca_results <- list()
 model_selection_results <- list()
 patient_class_results <- list()
+k_selection_lca <- list()
+
+# 2.3b Rule to choose the solutions shown to the clinicians (max 3 per stratum).
+# The three solutions are ALWAYS inside the range delimited by the two criteria:
+#   - k_AIC:     number of classes with the minimum AIC
+#   - k_entropy: number of classes with the maximum (relative) entropy
+#   - k_mid:     middle value of the range, rounded down: floor((k_AIC + k_entropy) / 2)
+# Examples: AIC = 3, entropy = 8 -> 3, 5, 8 | AIC = 3, entropy = 5 -> 3, 4, 5
+#           AIC = 4, entropy = 5 -> 4, 5    | AIC = entropy = 4      -> 4
+select_k_lca <- function(k_AIC, k_entropy) {
+  sort(unique(c(k_AIC, k_entropy, floor((k_AIC + k_entropy) / 2))))
+}
 
 # 2.4 Start stratified LCA
 for (i in seq_len(nrow(strata))){
@@ -334,14 +346,15 @@ for (i in seq_len(nrow(strata))){
   
   # 4.2 Identify candidate latent class solutions for evaluation
   
-  # Three solutions are selected for further evaluation within each stratum:
+  # At most three solutions are evaluated in each stratum, all of them inside
+  # the range delimited by the two criteria (see select_k_lca() above):
   # 1) the solution with the minimum AIC,
-  # 2) the solution with the maximum entropy,
-  # 3) the solution with one additional latent class compared with the
-  #    maximum-entropy solution.
+  # 2) the solution with the maximum relative entropy,
+  # 3) the middle value of the range between both, rounded down.
   #
-  # If two or more criteria identify the same number of classes, the duplicate
-  # solution is evaluated only once.
+  # If both criteria point to the same number of classes only one solution is
+  # evaluated; if they are consecutive, only two. A solution outside the range
+  # (e.g. maximum entropy + 1) is never evaluated.
   
   metrics <- as.data.frame(res$metrics)
   
@@ -369,39 +382,64 @@ for (i in seq_len(nrow(strata))){
     stop("Entropy column could not be identified in res$metrics for ",stratum_name)
   }
   
-  # Identify number-of-classes column
+  # Identify number-of-classes column (exact name first: a loose pattern such as
+  # "k" would also match columns like "log_likelihood")
   nclass_column <- names(metrics)[
     str_detect(
       names(metrics),
-      regex("nclass|nclasses|classes|k", ignore_case = TRUE)
+      regex("^(nclass|nclasses|n_classes|classes)$", ignore_case = TRUE)
     )
   ]
+  
+  if (length(nclass_column) == 0) {
+    nclass_column <- names(metrics)[
+      str_detect(names(metrics), regex("nclass|classes", ignore_case = TRUE))
+    ]
+  }
   
   if (length(nclass_column) == 0) {
     stop("Number-of-classes column could not be identified in res$metrics for ",stratum_name)
   }
   
-  # Convert number of classes to numeric
-  nclass_values <- as.numeric(as.character(metrics[[nclass_column[1]]]))
+  # Convert the metrics to numeric (MMLCA may return them as character)
+  nclass_values  <- as.numeric(as.character(metrics[[nclass_column[1]]]))
+  aic_values     <- as.numeric(as.character(metrics[[aic_column[1]]]))
+  entropy_values <- as.numeric(as.character(metrics[[entropy_column[1]]]))
   
   # Solution with minimum AIC
-  k_AIC <- nclass_values[which.min(metrics[[aic_column[1]]])]
+  k_AIC <- nclass_values[which.min(aic_values)]
   
-  # Solution with minimum entropy
-  k_entropy <- nclass_values[which.max(metrics[[entropy_column[1]]])]
+  # Solution with maximum relative entropy (MMLCA returns RELATIVE entropy:
+  # the higher, the better separated the classes)
+  k_entropy <- nclass_values[which.max(entropy_values)]
   
-  # Solution with one additional class than the minimum-entropy solution
-  k_entropy_plus1 <- k_entropy + 1
+  # Solutions inside the range [k_AIC, k_entropy]: both ends and the middle value
+  k_to_evaluate <- select_k_lca(k_AIC, k_entropy)
   
-  # Keep only candidate solutions within the fitted range
-  k_to_evaluate <- unique(c(k_AIC, k_entropy, k_entropy_plus1))
+  stopifnot(
+    length(k_to_evaluate) <= 3,
+    all(k_to_evaluate %in% nclass_values),
+    all(k_to_evaluate >= min(k_AIC, k_entropy) & k_to_evaluate <= max(k_AIC, k_entropy))
+  )
   
-  k_to_evaluate <- k_to_evaluate[k_to_evaluate %in% k_candidates]
-  
+  message("Columns used: AIC = ", aic_column[1], " | entropy = ", entropy_column[1])
   message("Minimum AIC: k = ", k_AIC)
-  message("Maximum entropy: k = ", k_entropy)
-  message("Maximum entropy + 1: k = ", k_entropy_plus1)
+  message("Maximum relative entropy: k = ", k_entropy)
   message("Models selected for evaluation: k = ",paste(k_to_evaluate, collapse = ", "))
+  
+  # Record the selection of this stratum (saved at the end of the script)
+  k_selection_lca[[stratum_name]] <- data.frame(
+    stratum         = stratum_name,
+    sexo_val        = sexo_actual,
+    edad_val        = edad_actual,
+    status_val      = status_actual,
+    k_AIC           = k_AIC,
+    k_entropy       = k_entropy,
+    k_mid           = floor((k_AIC + k_entropy) / 2),
+    k_selected      = paste(k_to_evaluate, collapse = ", "),
+    n_solutions     = length(k_to_evaluate),
+    stringsAsFactors = FALSE
+  )
   
   # Initialize container for selected solutions in the current stratum
   patient_class_results[[stratum_name]] <- list()
@@ -820,3 +858,13 @@ write_xlsx(
   model_selection_table,
   file.path(PATH_LCA_TABLES,"model_selection_all_strata.xlsx")
 )
+
+# 15. SAVE THE SOLUTIONS SELECTED IN EACH STRATUM
+# One row per stratum: k with minimum AIC, k with maximum entropy, middle value
+# of the range and the (max 3) solutions that were evaluated.
+k_selection_lca_table <- bind_rows(k_selection_lca)
+write_csv(
+  k_selection_lca_table,
+  file.path(PATH_LCA_TABLES, "k_selection_LCA.csv")
+)
+print(k_selection_lca_table)
